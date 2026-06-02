@@ -203,6 +203,7 @@ const handleSizeChange = (size: number) => {
           v-if="selectable"
           type="selection"
           :width="selectionWidth"
+          fixed="left"
           align="center"
           reserve-selection
         />

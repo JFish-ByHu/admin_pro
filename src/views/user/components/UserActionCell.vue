@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Edit, Lock, Unlock, Delete } from '@element-plus/icons-vue'
+import CommonTableActionCell, {
+  type CommonTableActionItem
+} from '@/components/common/CommonTableActionCell.vue'
 import type { UserInfo } from '@/types/user'
 
 const props = defineProps<{
@@ -20,26 +23,34 @@ const statusButtonType = computed(() => {
 const statusButtonIcon = computed(() => {
   return props.row.status === 'enabled' ? Lock : Unlock
 })
+
+const actions = computed<CommonTableActionItem[]>(() => {
+  return [
+    {
+      key: 'edit',
+      tooltip: 'edit user',
+      icon: Edit,
+      color: 'var(--c-info)',
+      onClick: () => emit('edit', props.row)
+    },
+    {
+      key: 'toggle-status',
+      tooltip: props.row.status === 'enabled' ? 'disable user' : 'enable user',
+      icon: statusButtonIcon.value,
+      type: statusButtonType.value,
+      onClick: () => emit('toggle-status', props.row)
+    },
+    {
+      key: 'delete',
+      tooltip: 'delete user',
+      icon: Delete,
+      type: 'danger',
+      onClick: () => emit('delete', props.row)
+    }
+  ]
+})
 </script>
 
 <template>
-  <div class="action-cell">
-    <el-button color="var(--c-info)" size="small" :icon="Edit" @click="emit('edit', row)" />
-    <el-button
-      :icon="statusButtonIcon"
-      :type="statusButtonType"
-      size="small"
-      @click="emit('toggle-status', row)"
-    />
-    <el-button type="danger" size="small" :icon="Delete" @click="emit('delete', row)" />
-  </div>
+  <CommonTableActionCell :actions="actions" />
 </template>
-
-<style scoped lang="scss">
-.action-cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-</style>
