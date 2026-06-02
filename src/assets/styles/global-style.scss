@@ -1,0 +1,103 @@
+// ==========================================
+// 全局样式变量 (Modern SaaS Theme)
+// ==========================================
+
+:root {
+  // --- 响应式布局变量 (clamp: min, preferred, max) ---
+  --layout-sidebar-width: 240px;
+  --layout-sidebar-collapse-width: 64px;
+  --layout-header-height: 60px;
+  --layout-padding: clamp(12px, 1.5vw, 20px);
+  --layout-gap: clamp(12px, 1.2vw, 24px);
+  --font-size-base: clamp(13px, 0.9vw, 15px);
+  --font-size-lg: clamp(16px, 1.2vw, 20px);
+  --font-size-xl: clamp(20px, 1.8vw, 32px);
+
+  // --- 主题色 (Vibrant Blue) ---
+  --c-primary: #2563eb;
+  --c-primary-hover: #1d4ed8;
+  --c-primary-light: #3b82f6;
+  --c-primary-lighter: #60a5fa;
+  --c-primary-dark: #1e3a8a;
+
+  // --- UI 交互色 ---
+  --c-primary-bg: #eff6ff; // 极浅的蓝，用于 Active 背景
+  --c-primary-border: #dbeafe;
+  --c-primary-border-hover: #bfdbfe;
+  --c-primary-focus-ring: rgba(59, 130, 246, 0.3);
+  --btn-focus-ring: rgba(37, 99, 235, 0.26);
+
+  // --- 文本色 (Zinc/Neutral) ---
+  --t-primary: #09090b; // 接近纯黑
+  --t-primary-variant: #18181b;
+  --t-regular: #3f3f46; // 正文
+  --t-secondary: #71717a; // 辅助
+  --t-muted: #a1a1aa; // 禁用/极弱
+
+  // --- 背景色 (Sleek Grays) ---
+  --bg-white: #ffffff; // 卡片/面板
+  --bg-page: #f4f4f5; // 整个页面底色
+  --bg-page-light: #fafafa;
+  --bg-dark: #18181b; // 极少部分需要深色的地方
+  --bg-hover: #f4f4f5; // 悬停底色
+
+  // --- 边框色 ---
+  --border-light: #e4e4e7;
+  --border-base: #d4d4d8;
+  --border-dark: #a1a1aa;
+
+  // --- 阴影 (Modern Diffused) ---
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+
+  // --- 状态色 用于替代element-plus默认蓝色 ---
+  --c-info: #2563eb;
+  --c-info-hover: #1d4ed8;
+  --c-info-bg: #eff6ff;
+
+  // --- 错误色 仅自用 ---
+  --per-error: #f56c6c;
+  --per-error-hover: #f78989;
+  --per-error-bg: #fee2e2;
+}
+
+html.dark {
+  // --- 主题色 (Dark Mode Blue) ---
+  --c-primary: #5b9bff;
+  --c-primary-hover: #78adff;
+  --c-primary-light: #4f8ff7;
+  --c-primary-lighter: #3b82f6;
+  --c-primary-dark: #b7d4ff;
+
+  // --- UI 交互色 ---
+  --c-primary-bg: rgba(59, 130, 246, 0.15); // 透明度混色，暗黑下更自然
+  --c-primary-border: rgba(59, 130, 246, 0.3);
+  --c-primary-border-hover: rgba(59, 130, 246, 0.5);
+  --c-primary-focus-ring: rgba(59, 130, 246, 0.3);
+  --btn-focus-ring: rgba(96, 165, 250, 0.42);
+
+  // --- 文本色 (Dark Zinc) ---
+  --t-primary: #fafafa;
+  --t-primary-variant: #f4f4f5;
+  --t-regular: #e4e4e7;
+  --t-secondary: #a1a1aa;
+  --t-muted: #71717a;
+
+  // --- 背景色 (Sleek Dark) ---
+  --bg-white: #18181b; // 组件面板背景 (Zinc 900)
+  --bg-page: #09090b; // 极暗大背景 (Zinc 950)
+  --bg-page-light: #27272a;
+  --bg-dark: #000000;
+  --bg-hover: #27272a; // Hover 状态 (Zinc 800)
+
+  // --- 边框色 ---
+  --border-light: #27272a; // 极其微弱的边框分割
+  --border-base: #3f3f46;
+  --border-dark: #52525b;
+
+  // --- 阴影 (Dark Mode Diffused) ---
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+}

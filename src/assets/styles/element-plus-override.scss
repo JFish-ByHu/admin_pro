@@ -1,0 +1,149 @@
+/** element-plus表单覆盖样式 */
+.el-form-item {
+  margin-bottom: 24px !important;
+}
+
+.el-form-item__label {
+  font-weight: 600 !important;
+  color: var(--t-primary) !important;
+  font-size: 13px !important;
+  padding-bottom: 4px !important;
+  line-height: 1.2 !important;
+}
+
+.el-input__wrapper {
+  border-radius: 8px !important;
+  background-color: var(--bg-white) !important;
+  box-shadow: 0 0 0 1px var(--border-base) inset !important;
+  transition:
+    box-shadow 0.2s ease,
+    background-color 0.2s ease !important;
+
+  &:hover {
+    box-shadow: 0 0 0 1px var(--c-primary-focus-ring) inset !important;
+  }
+
+  &.is-focus {
+    box-shadow: 0 0 0 1px var(--c-primary) inset !important;
+  }
+}
+
+.el-form-item.is-error {
+  .el-input__wrapper {
+    box-shadow: 0 0 0 1px var(--per-error) inset !important;
+    background-color: var(--bg-white) !important;
+
+    &:hover {
+      box-shadow: 0 0 0 1px var(--per-error-hover) inset !important;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px var(--per-error) inset !important;
+    }
+  }
+}
+
+.el-checkbox {
+  &__label {
+    white-space: normal !important;
+    line-height: 1.4 !important;
+    color: var(--t-regular) !important;
+  }
+
+  &__input {
+    .el-checkbox__inner {
+      background-color: var(--bg-white) !important;
+      border-color: var(--border-base) !important;
+    }
+
+    .el-checkbox__original {
+      background-color: var(--c-primary) !important;
+      border-color: var(--c-primary) !important;
+
+      &:hover {
+        border-color: var(--c-primary-hover) !important;
+      }
+    }
+
+    &.is-checked .el-checkbox__inner {
+      background-color: var(--c-info) !important;
+      border-color: var(--c-info) !important;
+    }
+
+    &.is-indeterminate .el-checkbox__inner {
+      background-color: var(--c-info) !important;
+      border-color: var(--c-info) !important;
+    }
+
+    &.is-indeterminate .el-checkbox__inner::before {
+      background-color: #fff !important;
+    }
+
+    .el-checkbox__inner:hover {
+      border-color: var(--c-info-hover) !important;
+    }
+  }
+
+  &--large {
+    height: auto !important;
+  }
+}
+
+.el-select__wrapper {
+  border-radius: 8px !important;
+  background-color: var(--bg-white) !important;
+  box-shadow: 0 0 0 1px var(--border-base) inset !important;
+  transition:
+    box-shadow 0.2s ease,
+    background-color 0.2s ease !important;
+
+  &:hover {
+    box-shadow: 0 0 0 1px var(--c-primary-focus-ring) inset !important;
+  }
+
+  &.is-focused {
+    box-shadow: 0 0 0 1px var(--c-primary) inset !important;
+  }
+}
+
+/** 覆盖 el-divider 的文字样式 */
+.el-divider__text {
+  font-size: 12px !important;
+  color: var(--t-muted) !important;
+  background-color: var(--bg-white) !important;
+}
+
+/** 覆盖侧边栏折叠后的悬浮弹出菜单 (Popper) 样式 */
+.el-menu--popup {
+  background-color: var(--bg-white) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-base) !important;
+  padding: 8px !important;
+  border: 1px solid var(--border-light) !important;
+
+  .el-menu-item,
+  .el-sub-menu__title {
+    border-radius: 6px !important;
+    height: 40px !important;
+    line-height: 40px !important;
+    margin-bottom: 4px !important;
+    color: var(--t-regular) !important;
+    background-color: transparent !important;
+    transition: all 0.2s ease !important;
+
+    &:last-child {
+      margin-bottom: 0 !important;
+    }
+
+    &:hover {
+      background-color: var(--bg-hover) !important;
+      color: var(--t-primary) !important;
+    }
+
+    &.is-active {
+      background-color: var(--c-primary-bg) !important;
+      color: var(--c-primary) !important;
+      font-weight: 600 !important;
+    }
+  }
+}

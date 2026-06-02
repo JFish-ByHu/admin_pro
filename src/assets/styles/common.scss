@@ -1,0 +1,55 @@
+/** 
+ * ==========================================
+ * 全局通用样式 (Common Styles)
+ * ==========================================
+ */
+
+/** 
+ * NProgress 进度条样式覆盖 
+ * 将原本默认的蓝色改为我们的主题色 var(--c-primary)
+ */
+#nprogress .bar {
+  background: var(--c-primary) !important;
+  height: 3px !important; /* 进度条粗细 */
+}
+
+#nprogress .peg {
+  box-shadow:
+    0 0 10px var(--c-primary),
+    0 0 5px var(--c-primary) !important;
+}
+
+#nprogress .spinner-icon {
+  border-top-color: var(--c-primary) !important;
+  border-left-color: var(--c-primary) !important;
+}
+
+/** 
+ * View Transitions API 全局设置 
+ * 用于配合主题切换时的扩散动画
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+}
+html.dark::view-transition-old(root) {
+  z-index: 9999;
+}
+html.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
+/* 防止主题切换动画结束瞬间白色闪烁 */
+::view-transition-group(root) {
+  animation-duration: 0s;
+}
+html::view-transition-image-pair(root) {
+  isolation: auto;
+}
