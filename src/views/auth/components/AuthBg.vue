@@ -207,7 +207,7 @@ onUnmounted(() => {
         height: 0;
         border: 0;
         border-bottom: 4px solid var(--bg-dark);
-        border-radius: 4px;
+        border-radius: var(--radius-xs);
         margin-top: 22px;
       }
     }

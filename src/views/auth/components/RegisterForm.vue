@@ -245,7 +245,7 @@ const socialRegister = () => {
       height: 40px;
       flex-shrink: 0;
       background-color: var(--c-primary-bg);
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       border: 1px solid var(--c-primary-border);
       cursor: pointer;
       transition: all 0.2s ease;
@@ -287,7 +287,7 @@ const socialRegister = () => {
 
   .register-btn {
     width: 100%;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-weight: 600;
     font-size: var(--font-size-base);
     height: clamp(42px, 5vw, 48px);
@@ -306,7 +306,7 @@ const socialRegister = () => {
 
   .social-btn {
     width: 100%;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     font-weight: 500;
     color: var(--t-regular);
     background-color: var(--bg-white);

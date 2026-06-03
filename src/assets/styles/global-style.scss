@@ -13,6 +13,12 @@
   --font-size-lg: clamp(16px, 1.2vw, 20px);
   --font-size-xl: clamp(20px, 1.8vw, 32px);
 
+  // --- 全局圆角规范 ---
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
   // --- 主题色 (Vibrant Blue) ---
   --c-primary: #2563eb;
   --c-primary-hover: #1d4ed8;

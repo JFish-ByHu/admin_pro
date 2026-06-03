@@ -205,7 +205,7 @@ const handleSizeChange = (size: number) => {
   flex: 1;
   background-color: var(--bg-white);
   border: 1px solid var(--border-light);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 

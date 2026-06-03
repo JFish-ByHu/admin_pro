@@ -24,7 +24,7 @@
   .welcome-card {
     border: 1px solid var(--border-light);
     background-color: var(--bg-white);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-base);
     overflow: hidden;
 

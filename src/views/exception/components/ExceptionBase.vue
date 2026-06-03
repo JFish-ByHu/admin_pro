@@ -84,7 +84,7 @@ const emit = defineEmits<{
   .action-btn {
     font-weight: 600;
     padding: 0 32px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     background-color: var(--c-primary);
     border-color: var(--c-primary);
     transition:

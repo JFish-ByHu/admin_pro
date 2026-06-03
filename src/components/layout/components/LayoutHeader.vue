@@ -170,7 +170,7 @@ const handleCommand = (command: string) => {
       cursor: pointer;
       outline: none;
       padding: 4px 8px;
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       transition: background-color 0.2s;
 
       &:hover {

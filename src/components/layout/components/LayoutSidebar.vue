@@ -145,7 +145,7 @@ const handleMenuSelect = () => {
       :deep(.el-sub-menu__title) {
         height: 44px;
         line-height: 44px;
-        border-radius: 8px; /* 胶囊圆角 */
+        border-radius: var(--radius-md);
         margin-bottom: 4px;
         color: var(--t-regular);
         background-color: transparent;
@@ -179,7 +179,7 @@ const handleMenuSelect = () => {
 
         :deep(.el-menu-item),
         :deep(.el-sub-menu__title) {
-          border-radius: 8px;
+          border-radius: var(--radius-md);
           padding: 0 !important;
           width: 48px !important;
           height: 44px;

@@ -91,7 +91,7 @@ watch(
     margin: 0 auto;
     background: var(--bg-white);
     padding: clamp(24px, 4vw, 48px) clamp(20px, 5vw, 64px);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     min-height: 600px;
 
