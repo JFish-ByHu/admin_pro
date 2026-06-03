@@ -1,15 +1,27 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { UseSortable } from '@vueuse/integrations/useSortable/component'
 import { useRoute, useRouter } from 'vue-router'
+import type { Options as SortableOptions } from 'sortablejs'
 import { useAppStore } from '@/stores/app'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const { visitedViews } = storeToRefs(appStore)
 
-const visitedViews = computed(() => appStore.visitedViews)
 const activePath = computed(() => route.path)
 const canCloseTags = computed(() => visitedViews.value.length > 1)
+
+const sortableOptions: SortableOptions = {
+  animation: 180,
+  ghostClass: 'is-ghost',
+  chosenClass: 'is-chosen',
+  dragClass: 'is-dragging',
+  filter: '.tags-view-item__close',
+  preventOnFilter: false
+}
 
 const getNextPathAfterClose = (path: string) => {
   const currentIndex = visitedViews.value.findIndex(item => item.path === path)
@@ -50,7 +62,12 @@ watch(
 <template>
   <div class="tags-view-container">
     <el-scrollbar>
-      <div class="tags-view-list">
+      <UseSortable
+        v-model="visitedViews"
+        as="div"
+        class="tags-view-list"
+        :options="sortableOptions"
+      >
         <button
           v-for="item in visitedViews"
           :key="item.path"
@@ -61,15 +78,11 @@ watch(
         >
           <span class="tags-view-item__dot" />
           <span class="tags-view-item__label">{{ item.title }}</span>
-          <span
-            v-if="canCloseTags"
-            class="tags-view-item__close"
-            @click.stop="closeTag(item.path)"
-          >
+          <span v-if="canCloseTags" class="tags-view-item__close" @click.stop="closeTag(item.path)">
             <el-icon :size="12"><i-ep-close /></el-icon>
           </span>
         </button>
-      </div>
+      </UseSortable>
     </el-scrollbar>
   </div>
 </template>
@@ -122,6 +135,10 @@ watch(
       color: var(--t-primary);
     }
 
+    &:active {
+      cursor: grabbing;
+    }
+
     &.is-active {
       background-color: var(--c-primary-bg);
       border-color: color-mix(in srgb, var(--c-primary) 18%, transparent);
@@ -150,11 +167,26 @@ watch(
       border-radius: 50%;
       color: inherit;
       flex-shrink: 0;
+      cursor: pointer;
       transition: background-color 0.2s ease;
 
       &:hover {
         background-color: color-mix(in srgb, currentColor 12%, transparent);
       }
+    }
+
+    &.is-chosen {
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-primary) 24%, transparent);
+    }
+
+    &.is-ghost {
+      opacity: 0.45;
+    }
+
+    &.is-dragging {
+      background-color: var(--bg-white);
+      color: var(--c-primary);
+      box-shadow: var(--shadow-sm);
     }
   }
 }
