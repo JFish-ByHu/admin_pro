@@ -51,6 +51,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     IEpArrowDown: typeof import('~icons/ep/arrow-down')['default']
     IEpBottomLeft: typeof import('~icons/ep/bottom-left')['default']
+    IEpClose: typeof import('~icons/ep/close')['default']
     IEpDataAnalysis: typeof import('~icons/ep/data-analysis')['default']
     IEpExpand: typeof import('~icons/ep/expand')['default']
     IEpFold: typeof import('~icons/ep/fold')['default']
@@ -70,6 +71,7 @@ declare module 'vue' {
     LayoutHeader: typeof import('./src/components/layout/components/LayoutHeader.vue')['default']
     LayoutIndex: typeof import('./src/components/layout/LayoutIndex.vue')['default']
     LayoutSidebar: typeof import('./src/components/layout/components/LayoutSidebar.vue')['default']
+    LayoutTagsView: typeof import('./src/components/layout/components/LayoutTagsView.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

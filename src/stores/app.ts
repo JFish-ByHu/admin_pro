@@ -1,9 +1,22 @@
 import { nextTick, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { useDark, useFullscreen, useMediaQuery } from '@vueuse/core'
+import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 // 主题持久化 key
 const THEME_STORAGE_KEY = 'vueuse-color-scheme'
+
+interface VisitedView {
+  path: string
+  title: string
+  name?: string
+}
+
+const DEFAULT_VISITED_VIEW: VisitedView = {
+  path: '/dashboard',
+  title: '控制台',
+  name: 'Dashboard'
+}
 
 /**
  * 判断用户是否手动设置过主题
@@ -90,6 +103,7 @@ export const useAppStore = defineStore(
     const isTablet = useMediaQuery('(max-width: 1280px)')
     const sidebarCollapse = ref(isTablet.value)
     const sidebarDrawerVisible = ref(false)
+    const visitedViews = ref<VisitedView[]>([DEFAULT_VISITED_VIEW])
 
     watch(isTablet, val => {
       if (val) {
@@ -115,6 +129,33 @@ export const useAppStore = defineStore(
       sidebarDrawerVisible.value = false
     }
 
+    const addVisitedView = (route: RouteLocationNormalizedLoaded) => {
+      const path = route.path
+      const title = (route.meta.title as string) || '未命名页面'
+      const name = typeof route.name === 'string' ? route.name : undefined
+      const existingView = visitedViews.value.find(item => item.path === path)
+
+      if (existingView) {
+        existingView.title = title
+        existingView.name = name
+        return
+      }
+
+      visitedViews.value.push({
+        path,
+        title,
+        name
+      })
+    }
+
+    const removeVisitedView = (path: string) => {
+      visitedViews.value = visitedViews.value.filter(item => item.path !== path)
+
+      if (visitedViews.value.length === 0) {
+        visitedViews.value = [DEFAULT_VISITED_VIEW]
+      }
+    }
+
     return {
       isDark,
       isFullscreen,
@@ -122,16 +163,19 @@ export const useAppStore = defineStore(
       isTablet,
       sidebarCollapse,
       sidebarDrawerVisible,
+      visitedViews,
       toggleDarkWithTransition,
       toggleFullscreen,
       toggleSidebar,
-      closeSidebarDrawer
+      closeSidebarDrawer,
+      addVisitedView,
+      removeVisitedView
     }
   },
   {
     persist: {
       key: 'admin-pro-app-config',
-      pick: ['sidebarCollapse']
+      pick: ['sidebarCollapse', 'visitedViews']
     }
   }
 )

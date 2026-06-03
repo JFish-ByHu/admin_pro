@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
+import { computed, useSlots, type Component } from 'vue'
 
 export interface CommonTableToolbarAction {
   key: string
@@ -14,19 +14,33 @@ export interface CommonTableToolbarAction {
   onClick?: () => void
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     actions: CommonTableToolbarAction[]
+    showSelectionSummary?: boolean
     selectedCount?: number
     selectedText?: string
     emptyText?: string
+    summary?: string
   }>(),
   {
+    showSelectionSummary: false,
     selectedCount: 0,
     selectedText: '已选择',
-    emptyText: '未选择任何数据'
+    emptyText: '未选择任何数据',
+    summary: ''
   }
 )
+
+const slots = useSlots()
+
+const hasSummary = computed(() => {
+  return Boolean(slots.summary) || Boolean(props.summary) || props.showSelectionSummary
+})
+
+const normalizedSummary = computed(() => {
+  return props.summary.trim()
+})
 
 const handleActionClick = (action: CommonTableToolbarAction) => {
   if (action.disabled || action.loading) {
@@ -38,14 +52,22 @@ const handleActionClick = (action: CommonTableToolbarAction) => {
 </script>
 
 <template>
-  <div class="common-table-toolbar">
-    <div class="common-table-toolbar__summary">
-      <span class="common-table-toolbar__summary-label">{{ selectedText }}</span>
-      <span class="common-table-toolbar__summary-value">{{ selectedCount }}</span>
-      <span class="common-table-toolbar__summary-suffix">项</span>
-      <span v-if="selectedCount === 0" class="common-table-toolbar__summary-empty">
-        {{ emptyText }}
-      </span>
+  <div class="common-table-toolbar" :class="{ 'is-actions-only': !hasSummary }">
+    <div v-if="hasSummary" class="common-table-toolbar__summary">
+      <slot name="summary">
+        <template v-if="normalizedSummary">
+          <span class="common-table-toolbar__summary-text">{{ normalizedSummary }}</span>
+        </template>
+
+        <template v-else-if="showSelectionSummary">
+          <span class="common-table-toolbar__summary-label">{{ selectedText }}</span>
+          <span class="common-table-toolbar__summary-value">{{ selectedCount }}</span>
+          <span class="common-table-toolbar__summary-suffix">项</span>
+          <span v-if="selectedCount === 0" class="common-table-toolbar__summary-empty">
+            {{ emptyText }}
+          </span>
+        </template>
+      </slot>
     </div>
 
     <div class="common-table-toolbar__actions">
@@ -74,11 +96,8 @@ const handleActionClick = (action: CommonTableToolbarAction) => {
   justify-content: space-between;
   gap: var(--layout-gap);
   flex-wrap: wrap;
-  padding: clamp(10px, 1.2vw, 14px) var(--layout-padding);
-  background-color: var(--bg-white);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  padding: clamp(10px, 1.2vw, 14px) 0;
+  background-color: transparent;
 
   &__summary {
     display: flex;
@@ -91,7 +110,8 @@ const handleActionClick = (action: CommonTableToolbarAction) => {
 
   &__summary-label,
   &__summary-suffix,
-  &__summary-empty {
+  &__summary-empty,
+  &__summary-text {
     color: var(--t-secondary);
   }
 
@@ -107,10 +127,10 @@ const handleActionClick = (action: CommonTableToolbarAction) => {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+  }
 
-    :deep(.el-button) {
-      border-radius: var(--radius-md);
-    }
+  &.is-actions-only {
+    justify-content: flex-end;
   }
 
   @include respond-to(mobile) {

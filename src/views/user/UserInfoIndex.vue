@@ -200,7 +200,7 @@ const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
   return [
     {
       key: 'create',
-      label: '新增用户',
+      label: '新增',
       icon: CirclePlus,
       color: 'var(--c-info)',
       onClick: handleCreate
@@ -210,11 +210,17 @@ const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
       label: '批量删除',
       icon: Delete,
       type: 'danger',
-      plain: true,
       disabled: selectedRowKeys.value.length === 0,
       onClick: handleBatchDelete
     }
   ]
+})
+
+const toolbarSummaryText = computed(() => {
+  const selected = selectedRowKeys.value.length
+  const INFO = selected > 0 ? `选中 ${selected} 项` : ''
+
+  return INFO
 })
 
 const toUserRow = (rowData: Record<string, unknown>) => rowData as unknown as UserInfo
@@ -280,7 +286,6 @@ const columns: CommonTableColumn[] = [
       @search="handleSearch"
       @reset="handleReset"
     />
-    <CommonTableToolbar :actions="toolbarActions" :selected-count="selectedRowKeys.length" />
     <CommonTable
       v-model:page="pagination.page"
       v-model:page-size="pagination.pageSize"
@@ -291,7 +296,15 @@ const columns: CommonTableColumn[] = [
       :pagination="pagination"
       selectable
       @page-change="handlePageChange"
-    />
+    >
+      <template #header>
+        <CommonTableToolbar :actions="toolbarActions">
+          <template #summary>
+            <span class="user-toolbar-summary">{{ toolbarSummaryText }}</span>
+          </template>
+        </CommonTableToolbar>
+      </template>
+    </CommonTable>
   </div>
 </template>
 
@@ -302,5 +315,10 @@ const columns: CommonTableColumn[] = [
   gap: var(--layout-gap);
   height: 100%;
   min-height: 0;
+}
+
+.user-toolbar-summary {
+  color: var(--t-secondary);
+  font-size: var(--font-size-base);
 }
 </style>

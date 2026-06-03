@@ -2,6 +2,7 @@
 import { useAppStore } from '@/stores/app'
 import LayoutSidebar from './components/LayoutSidebar.vue'
 import LayoutHeader from './components/LayoutHeader.vue'
+import LayoutTagsView from './components/LayoutTagsView.vue'
 import AppMain from './components/AppMain.vue'
 
 const appStore = useAppStore()
@@ -30,6 +31,9 @@ const appStore = useAppStore()
       <el-header height="60px" class="layout-header">
         <LayoutHeader />
       </el-header>
+
+      <!-- 标签视图 -->
+      <LayoutTagsView />
 
       <!-- 主内容区 -->
       <AppMain />

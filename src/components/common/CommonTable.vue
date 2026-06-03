@@ -190,6 +190,10 @@ const handleSizeChange = (size: number) => {
 
 <template>
   <div class="common-table">
+    <div v-if="$slots.header" class="common-table__header">
+      <slot name="header" />
+    </div>
+
     <div v-loading="loading" class="common-table__main">
       <el-table
         ref="tableRef"
@@ -278,6 +282,12 @@ const handleSizeChange = (size: number) => {
     position: relative;
     flex: 1;
     min-height: 0;
+  }
+
+  &__header {
+    padding: 0 var(--layout-padding);
+    border-bottom: 1px solid var(--border-light);
+    background-color: var(--bg-white);
   }
 
   &__empty {
