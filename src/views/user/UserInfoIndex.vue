@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watchEffect } from 'vue'
+import { CirclePlus, Delete } from '@element-plus/icons-vue'
 import CommonFilter, { type FilterField } from '@/components/common/CommonFilter.vue'
 import CommonTable, {
   type CommonTableColumn,
   type TablePagination
 } from '@/components/common/CommonTable.vue'
+import CommonTableToolbar, {
+  type CommonTableToolbarAction
+} from '@/components/common/CommonTableToolbar.vue'
 import type { UserInfo, UserQuery, UserStatus } from '@/types/user'
 import { Message } from '@/utils/message'
 import { UserActionCell, UserIdentityCell, UserRoleTag, UserStatusTag } from './CompsExport'
@@ -162,6 +166,57 @@ const handleDelete = (row: UserInfo) => {
     .catch(() => {})
 }
 
+const handleCreate = () => {
+  Message.info('新增用户功能开发中')
+}
+
+const handleBatchDelete = () => {
+  if (!selectedRowKeys.value.length) {
+    Message.warning('请先选择要删除的用户')
+    return
+  }
+
+  const deleteCount = selectedRowKeys.value.length
+
+  ElMessageBox.confirm(`确认删除已选中的 ${deleteCount} 个用户吗？`, '批量删除确认', {
+    type: 'warning',
+    confirmButtonText: '确认删除',
+    cancelButtonText: '取消'
+  })
+    .then(() => {
+      const selectedKeySet = new Set(selectedRowKeys.value)
+      allUsers.value = allUsers.value.filter(item => !selectedKeySet.has(item.id))
+      selectedRowKeys.value = []
+
+      const maxPage = Math.max(1, Math.ceil(filteredUsers.value.length / pagination.pageSize))
+      pagination.page = Math.min(pagination.page, maxPage)
+
+      Message.success(`已删除 ${deleteCount} 个用户`)
+    })
+    .catch(() => {})
+}
+
+const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
+  return [
+    {
+      key: 'create',
+      label: '新增用户',
+      icon: CirclePlus,
+      color: 'var(--c-info)',
+      onClick: handleCreate
+    },
+    {
+      key: 'batch-delete',
+      label: '批量删除',
+      icon: Delete,
+      type: 'danger',
+      plain: true,
+      disabled: selectedRowKeys.value.length === 0,
+      onClick: handleBatchDelete
+    }
+  ]
+})
+
 const toUserRow = (rowData: Record<string, unknown>) => rowData as unknown as UserInfo
 // 普通表格列配置
 const columns: CommonTableColumn[] = [
@@ -225,6 +280,7 @@ const columns: CommonTableColumn[] = [
       @search="handleSearch"
       @reset="handleReset"
     />
+    <CommonTableToolbar :actions="toolbarActions" :selected-count="selectedRowKeys.length" />
     <CommonTable
       v-model:page="pagination.page"
       v-model:page-size="pagination.pageSize"

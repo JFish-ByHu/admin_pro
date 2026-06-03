@@ -15,6 +15,7 @@ declare module 'vue' {
     CommonFilter: typeof import('./src/components/common/CommonFilter.vue')['default']
     CommonTable: typeof import('./src/components/common/CommonTable.vue')['default']
     CommonTableActionCell: typeof import('./src/components/common/CommonTableActionCell.vue')['default']
+    CommonTableToolbar: typeof import('./src/components/common/CommonTableToolbar.vue')['default']
     CommonVirtualTable: typeof import('./src/components/common/CommonVirtualTable.vue')['default']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
