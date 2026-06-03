@@ -143,13 +143,13 @@ const mergedColumns = computed<Column[]>(() => {
 })
 
 // 切换页码
-const handleCurrentChange = (page: number) => {
+const changePage = (page: number) => {
   emit('update:page', page)
   emit('page-change')
 }
 
 // 切换每页条数
-const handleSizeChange = (size: number) => {
+const changePageSize = (size: number) => {
   emit('update:pageSize', size)
   emit('page-change')
 }
@@ -188,10 +188,11 @@ const handleSizeChange = (size: number) => {
         :page-size="pagination.pageSize"
         :total="pagination.total"
         :page-sizes="pageSizes"
+        size="small"
         layout="total, sizes, prev, pager, next, jumper"
         background
-        @current-change="handleCurrentChange"
-        @size-change="handleSizeChange"
+        @current-change="changePage"
+        @size-change="changePageSize"
       />
     </div>
   </div>

@@ -74,7 +74,7 @@ onMounted(() => {
   refreshCaptcha()
 })
 
-const handleLogin = () => {
+const submitLogin = () => {
   formRef.value?.validate(async valid => {
     if (valid) {
       if (!model.value.terms) {
@@ -154,7 +154,7 @@ const forgetPassword = () => {
       :rules="rules"
       size="large"
       label-position="top"
-      @submit.prevent="handleLogin"
+      @submit.prevent="submitLogin"
     >
       <!-- 账号输入 -->
       <el-form-item prop="username" label="Username">

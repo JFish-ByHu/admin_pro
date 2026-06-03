@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useAppStore } from '@/stores/app'
+
 // AppMain 负责主内容区域的路由渲染与过渡动画
+const appStore = useAppStore()
 </script>
 
 <template>
@@ -7,7 +10,7 @@
     <router-view v-slot="{ Component, route }">
       <transition name="fade-transform" mode="out-in">
         <keep-alive>
-          <component :is="Component" :key="route.path" />
+          <component :is="Component" v-if="appStore.appMainVisible" :key="route.path" />
         </keep-alive>
       </transition>
     </router-view>

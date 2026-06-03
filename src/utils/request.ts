@@ -20,7 +20,7 @@ const PROGRESS_DELAY = 300
 let pendingCount = 0
 let progressTimer: ReturnType<typeof setTimeout> | null = null
 
-const handleRequestStart = () => {
+const startRequestProgress = () => {
   pendingCount++
   if (pendingCount === 1 && progressTimer === null) {
     progressTimer = setTimeout(() => {
@@ -30,7 +30,7 @@ const handleRequestStart = () => {
   }
 }
 
-const handleRequestEnd = () => {
+const finishRequestProgress = () => {
   pendingCount = Math.max(0, pendingCount - 1)
   if (pendingCount > 0) return
 
@@ -60,7 +60,7 @@ const service: AxiosInstance = axios.create({
 // ==========================================
 service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    handleRequestStart()
+    startRequestProgress()
 
     // 携带 Access Token
     const userStore = useUserStore()
@@ -71,7 +71,7 @@ service.interceptors.request.use(
     return config
   },
   (error: AxiosError) => {
-    handleRequestEnd()
+    finishRequestProgress()
     return Promise.reject(error)
   }
 )
@@ -85,7 +85,7 @@ let requestsQueue: Array<(token: string) => void> = []
 
 service.interceptors.response.use(
   (response: AxiosResponse) => {
-    handleRequestEnd()
+    finishRequestProgress()
 
     const res = response.data
 
@@ -100,7 +100,7 @@ service.interceptors.response.use(
     return Promise.reject(new Error(res.message || 'Error'))
   },
   (error: AxiosError) => {
-    handleRequestEnd()
+    finishRequestProgress()
 
     // 处理网络层面的错误或后端抛出的 HTTP 异常状态码
     if (error.response) {

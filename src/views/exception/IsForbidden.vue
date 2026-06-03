@@ -5,7 +5,7 @@ import { errorLottieUrls } from '@/constants/errorLottieUrl'
 
 const router = useRouter()
 
-const handleGoBack = () => {
+const goBackHome = () => {
   router.push('/')
 }
 </script>
@@ -16,6 +16,6 @@ const handleGoBack = () => {
     title="403 Forbidden"
     subtitle="Sorry, your current account does not have the necessary permissions to view this content."
     btn-text="Back to Home"
-    @action="handleGoBack"
+    @action="goBackHome"
   />
 </template>

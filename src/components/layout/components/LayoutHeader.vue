@@ -13,7 +13,16 @@ const userInfo = computed(() => userStore.userInfo)
 const currentRouteTitle = computed(() => (route.meta.title as string) || '控制台')
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-const handleCommand = (command: string) => {
+const refreshContent = async (event: MouseEvent) => {
+  if (event.ctrlKey) {
+    window.location.reload()
+    return
+  }
+
+  await appStore.refreshCurrentView()
+}
+
+const runUserMenuCommand = (command: string) => {
   if (command === 'logout') {
     ElMessageBox.confirm('确定要退出登录吗？', 'Tip', {
       confirmButtonText: 'Logout',
@@ -61,6 +70,20 @@ const handleCommand = (command: string) => {
     </div>
 
     <div class="right-section">
+      <!-- 局部刷新按钮 -->
+      <el-tooltip content="点击局部刷新，Ctrl + 点击整页刷新" placement="bottom">
+        <el-button
+          circle
+          text
+          class="action-btn"
+          :disabled="appStore.isRefreshingContent"
+          @click="refreshContent"
+        >
+          <el-icon :size="20" :class="{ 'is-spinning': appStore.isRefreshingContent }">
+            <i-ep-refresh />
+          </el-icon>
+        </el-button>
+      </el-tooltip>
       <!-- 亮暗色切换按钮 -->
       <el-tooltip :content="appStore.isDark ? 'light' : 'dark'" placement="bottom">
         <el-button
@@ -90,7 +113,7 @@ const handleCommand = (command: string) => {
       </el-tooltip>
 
       <!-- 用户信息下拉菜单 -->
-      <el-dropdown trigger="click" @command="handleCommand">
+      <el-dropdown trigger="click" @command="runUserMenuCommand">
         <div class="user-profile">
           <el-avatar :size="32" :src="userInfo?.avatarUrl || defaultAvatar" />
           <span class="username">{{ userInfo?.nickname || userInfo?.username || 'Admin' }}</span>
@@ -161,6 +184,10 @@ const handleCommand = (command: string) => {
         background-color: var(--bg-page);
         color: var(--c-primary);
       }
+
+      .is-spinning {
+        animation: refresh-rotate 0.8s linear infinite;
+      }
     }
 
     .user-profile {
@@ -191,6 +218,16 @@ const handleCommand = (command: string) => {
     :deep(.el-button + .el-button) {
       margin-left: 0 !important;
     }
+  }
+}
+
+@keyframes refresh-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

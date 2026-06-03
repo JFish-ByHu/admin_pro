@@ -6,7 +6,7 @@ import { errorLottieUrls } from '@/constants/errorLottieUrl'
 const route = useRoute()
 const router = useRouter()
 
-const handleGoBack = () => {
+const goToLogin = () => {
   const redirect = route.query.redirect as string
   router.push({ path: '/auth', query: redirect ? { redirect } : undefined })
 }
@@ -18,6 +18,6 @@ const handleGoBack = () => {
     title="401 Unauthorized"
     subtitle="Sorry, you don't have permission to access this page. Please log in with appropriate credentials or contact the administrator."
     btn-text="Go to Login"
-    @action="handleGoBack"
+    @action="goToLogin"
   />
 </template>

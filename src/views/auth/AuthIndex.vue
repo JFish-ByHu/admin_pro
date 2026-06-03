@@ -13,15 +13,15 @@ const currentFormComponent = computed(() => {
 // 控制背景眼睛是否闭合的状态
 const isBlind = ref(false)
 
-const handlePasswordFocus = () => {
+const activateBlindMode = () => {
   isBlind.value = true
 }
 
-const handlePasswordBlur = () => {
+const deactivateBlindMode = () => {
   isBlind.value = false
 }
 
-const handleSwitchMode = (mode: 'login' | 'register') => {
+const switchAuthMode = (mode: 'login' | 'register') => {
   currentMode.value = mode
   isBlind.value = false
 }
@@ -37,9 +37,9 @@ const handleSwitchMode = (mode: 'login' | 'register') => {
         <transition name="fade-slide" mode="out-in">
           <component
             :is="currentFormComponent"
-            @password-focus="handlePasswordFocus"
-            @password-blur="handlePasswordBlur"
-            @switch-mode="handleSwitchMode"
+            @password-focus="activateBlindMode"
+            @password-blur="deactivateBlindMode"
+            @switch-mode="switchAuthMode"
           />
         </transition>
       </div>

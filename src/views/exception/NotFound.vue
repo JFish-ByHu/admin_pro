@@ -5,7 +5,7 @@ import { errorLottieUrls } from '@/constants/errorLottieUrl'
 
 const router = useRouter()
 
-const handleGoBack = () => {
+const goBackHome = () => {
   router.push('/')
 }
 </script>
@@ -16,6 +16,6 @@ const handleGoBack = () => {
     title="404 Page Not Found"
     subtitle="The page you are looking for might have been removed, had its name changed, or is temporarily unavailable."
     btn-text="Back to Home"
-    @action="handleGoBack"
+    @action="goBackHome"
   />
 </template>

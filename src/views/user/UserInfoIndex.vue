@@ -124,28 +124,28 @@ const mockRequest = () => {
 }
 
 // 查询
-const handleSearch = () => {
+const searchUsers = () => {
   pagination.page = 1
   appliedQuery.value = { ...query }
   mockRequest()
 }
 
 // 重置
-const handleReset = () => {
+const resetFilters = () => {
   pagination.page = 1
   appliedQuery.value = { ...query }
   mockRequest()
 }
 
 // 翻页
-const handlePageChange = () => mockRequest()
+const refreshPageData = () => mockRequest()
 
 // 行操作
-const handleEdit = (row: UserInfo) => {
+const editUser = (row: UserInfo) => {
   Message.info(`编辑用户：${row.nickname}（${row.username}）`)
 }
 
-const handleToggleStatus = (row: UserInfo) => {
+const toggleUserStatus = (row: UserInfo) => {
   const target = allUsers.value.find(item => item.id === row.id)
   if (target) {
     target.status = target.status === 'enabled' ? 'disabled' : 'enabled'
@@ -153,7 +153,7 @@ const handleToggleStatus = (row: UserInfo) => {
   }
 }
 
-const handleDelete = (row: UserInfo) => {
+const deleteUser = (row: UserInfo) => {
   ElMessageBox.confirm(`确认删除用户「${row.nickname}」吗？`, '删除确认', {
     type: 'warning',
     confirmButtonText: '确认删除',
@@ -166,11 +166,11 @@ const handleDelete = (row: UserInfo) => {
     .catch(() => {})
 }
 
-const handleCreate = () => {
+const createUser = () => {
   Message.info('新增用户功能开发中')
 }
 
-const handleBatchDelete = () => {
+const deleteSelectedUsers = () => {
   if (!selectedRowKeys.value.length) {
     Message.warning('请先选择要删除的用户')
     return
@@ -202,16 +202,18 @@ const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
       key: 'create',
       label: '新增',
       icon: CirclePlus,
+      size: 'small',
       color: 'var(--c-info)',
-      onClick: handleCreate
+      onClick: createUser
     },
     {
       key: 'batch-delete',
       label: '批量删除',
       icon: Delete,
       type: 'danger',
+      size: 'small',
       disabled: selectedRowKeys.value.length === 0,
-      onClick: handleBatchDelete
+      onClick: deleteSelectedUsers
     }
   ]
 })
@@ -269,9 +271,9 @@ const columns: CommonTableColumn[] = [
     cellRenderer: ({ rowData }) =>
       h(UserActionCell, {
         row: toUserRow(rowData),
-        onEdit: handleEdit,
-        onToggleStatus: handleToggleStatus,
-        onDelete: handleDelete
+        onEdit: editUser,
+        onToggleStatus: toggleUserStatus,
+        onDelete: deleteUser
       })
   }
 ]
@@ -283,8 +285,8 @@ const columns: CommonTableColumn[] = [
       v-model="query"
       :fields="filterFields"
       :loading="loading"
-      @search="handleSearch"
-      @reset="handleReset"
+      @search="searchUsers"
+      @reset="resetFilters"
     />
     <CommonTable
       v-model:page="pagination.page"
@@ -295,7 +297,7 @@ const columns: CommonTableColumn[] = [
       :loading="loading"
       :pagination="pagination"
       selectable
-      @page-change="handlePageChange"
+      @page-change="refreshPageData"
     >
       <template #header>
         <CommonTableToolbar :actions="toolbarActions">

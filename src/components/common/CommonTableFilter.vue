@@ -50,10 +50,10 @@ const updateField = (prop: string, value: unknown) => {
   emit('update:modelValue', { ...props.modelValue, [prop]: value })
 }
 // 查询
-const handleSearch = () => emit('search')
+const submitSearch = () => emit('search')
 
 // 重置：清空所有字段后再触发查询
-const handleReset = () => {
+const resetFilters = () => {
   const cleared = { ...props.modelValue } as Record<string, unknown>
   props.fields.forEach(field => {
     cleared[field.prop] = field.type === 'daterange' ? [] : ''
@@ -65,7 +65,7 @@ const handleReset = () => {
 
 <template>
   <div class="pro-filter">
-    <form class="filter-form" @submit.prevent="handleSearch">
+    <form class="filter-form" @submit.prevent="submitSearch">
       <div class="filter-fields">
         <div v-for="field in fields" :key="field.prop" class="filter-item">
           <label class="filter-label">{{ field.label }}</label>
@@ -78,7 +78,7 @@ const handleReset = () => {
               :placeholder="field.placeholder || `请输入${field.label}`"
               :clearable="field.clearable !== false"
               @update:model-value="(val: unknown) => updateField(field.prop, val)"
-              @keyup.enter="handleSearch"
+              @keyup.enter="submitSearch"
             />
 
             <!-- 下拉选择 -->
@@ -129,7 +129,7 @@ const handleReset = () => {
           <el-icon v-show="!loading"><i-ep-search /></el-icon>
           <span>查询</span>
         </el-button>
-        <el-button type="info" plain @click="handleReset">
+        <el-button type="info" plain @click="resetFilters">
           <el-icon><i-ep-refresh /></el-icon>
           <span>重置</span>
         </el-button>

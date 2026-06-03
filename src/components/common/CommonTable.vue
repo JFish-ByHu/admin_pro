@@ -153,7 +153,7 @@ const updateSelectedRowKeys = (keys: Array<string | number>) => {
   emit('selection-change', keys)
 }
 
-const handleSelectionChange = (rows: Record<string, unknown>[]) => {
+const syncSelectionRows = (rows: Record<string, unknown>[]) => {
   if (isSyncingSelection.value) {
     return
   }
@@ -177,12 +177,12 @@ const formatCellValue = (
   return row[column.prop] ?? ''
 }
 
-const handleCurrentChange = (page: number) => {
+const changePage = (page: number) => {
   emit('update:page', page)
   emit('page-change')
 }
 
-const handleSizeChange = (size: number) => {
+const changePageSize = (size: number) => {
   emit('update:pageSize', size)
   emit('page-change')
 }
@@ -201,7 +201,7 @@ const handleSizeChange = (size: number) => {
         :row-key="rowKey"
         height="100%"
         style="width: 100%"
-        @selection-change="handleSelectionChange"
+        @selection-change="syncSelectionRows"
       >
         <el-table-column
           v-if="selectable"
@@ -257,10 +257,11 @@ const handleSizeChange = (size: number) => {
         :page-size="pagination.pageSize"
         :total="pagination.total"
         :page-sizes="pageSizes"
+        size="small"
         layout="total, sizes, prev, pager, next, jumper"
         background
-        @current-change="handleCurrentChange"
-        @size-change="handleSizeChange"
+        @current-change="changePage"
+        @size-change="changePageSize"
       />
     </div>
   </div>
@@ -301,7 +302,7 @@ const handleSizeChange = (size: number) => {
   &__footer {
     display: flex;
     justify-content: flex-end;
-    padding: clamp(10px, 1.2vw, 16px) var(--layout-padding);
+    padding: clamp(10px, 1.2vw, 10px) var(--layout-padding);
     border-top: 1px solid var(--border-light);
 
     @include respond-to(mobile) {

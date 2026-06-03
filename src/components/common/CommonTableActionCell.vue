@@ -46,7 +46,7 @@ const dropdownActions = computed(() => {
   return props.actions.slice(Math.max(props.maxVisible - 1, 0))
 })
 
-const handleActionClick = (action: CommonTableActionItem) => {
+const triggerAction = (action: CommonTableActionItem) => {
   if (action.disabled) {
     return
   }
@@ -72,7 +72,7 @@ const handleActionClick = (action: CommonTableActionItem) => {
           :plain="action.plain"
           :text="action.text"
           :size="size"
-          @click="handleActionClick(action)"
+          @click="triggerAction(action)"
         />
       </el-tooltip>
 
@@ -81,7 +81,7 @@ const handleActionClick = (action: CommonTableActionItem) => {
         trigger="click"
         class="is-dropdown"
         @command="
-          (key: string) => handleActionClick(dropdownActions.find(action => action.key === key)!)
+          (key: string) => triggerAction(dropdownActions.find(action => action.key === key)!)
         "
       >
         <span class="common-action-cell__dropdown-trigger">

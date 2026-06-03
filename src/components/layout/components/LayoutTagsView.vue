@@ -19,13 +19,13 @@ const getNextPathAfterClose = (path: string) => {
   return nextView?.path || prevView?.path || '/dashboard'
 }
 
-const handleTagClick = (path: string) => {
+const openTag = (path: string) => {
   if (path !== route.path) {
     router.push(path)
   }
 }
 
-const handleTagClose = (path: string) => {
+const closeTag = (path: string) => {
   const nextPath = getNextPathAfterClose(path)
   const isCurrentView = path === route.path
 
@@ -57,14 +57,14 @@ watch(
           type="button"
           class="tags-view-item"
           :class="{ 'is-active': activePath === item.path }"
-          @click="handleTagClick(item.path)"
+          @click="openTag(item.path)"
         >
           <span class="tags-view-item__dot" />
           <span class="tags-view-item__label">{{ item.title }}</span>
           <span
             v-if="canCloseTags"
             class="tags-view-item__close"
-            @click.stop="handleTagClose(item.path)"
+            @click.stop="closeTag(item.path)"
           >
             <el-icon :size="12"><i-ep-close /></el-icon>
           </span>

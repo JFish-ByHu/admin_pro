@@ -12,7 +12,7 @@ const appStore = useAppStore()
 const activeMenu = computed(() => route.path)
 
 // 移动端点击菜单后关闭抽屉
-const handleMenuSelect = () => {
+const selectMenu = () => {
   if (appStore.isMobile) {
     appStore.closeSidebarDrawer()
   }
@@ -40,7 +40,7 @@ const handleMenuSelect = () => {
         active-text-color="var(--c-primary)"
         router
         class="layout-menu"
-        @select="handleMenuSelect"
+        @select="selectMenu"
       >
         <el-menu-item index="/dashboard">
           <el-icon><i-ep-data-analysis /></el-icon>

@@ -6,6 +6,7 @@ export interface CommonTableToolbarAction {
   label: string
   icon?: Component
   type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+  size?: 'large' | 'default' | 'small'
   color?: string
   plain?: boolean
   text?: boolean
@@ -42,7 +43,7 @@ const normalizedSummary = computed(() => {
   return props.summary.trim()
 })
 
-const handleActionClick = (action: CommonTableToolbarAction) => {
+const triggerAction = (action: CommonTableToolbarAction) => {
   if (action.disabled || action.loading) {
     return
   }
@@ -76,12 +77,13 @@ const handleActionClick = (action: CommonTableToolbarAction) => {
         :key="action.key"
         :icon="action.icon"
         :type="action.type"
+        :size="action.size"
         :color="action.color"
         :plain="action.plain"
         :text="action.text"
         :disabled="action.disabled"
         :loading="action.loading"
-        @click="handleActionClick(action)"
+        @click="triggerAction(action)"
       >
         {{ action.label }}
       </el-button>
@@ -96,7 +98,7 @@ const handleActionClick = (action: CommonTableToolbarAction) => {
   justify-content: space-between;
   gap: var(--layout-gap);
   flex-wrap: wrap;
-  padding: clamp(10px, 1.2vw, 14px) 0;
+  padding: clamp(10px, 1.2vw, 10px) 0;
   background-color: transparent;
 
   &__summary {

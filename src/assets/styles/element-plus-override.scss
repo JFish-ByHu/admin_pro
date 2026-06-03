@@ -146,18 +146,4 @@
       font-weight: 600 !important;
     }
   }
-
-  .el-message-box {
-    .el-message-box__btns {
-      .el-button.el-button--primary {
-        background-color: var(--c-info) !important;
-        border-color: var(--c-info) !important;
-
-        &:hover {
-          background-color: var(--c-primary-hover) !important;
-          border-color: var(--c-primary-hover) !important;
-        }
-      }
-    }
-  }
 }

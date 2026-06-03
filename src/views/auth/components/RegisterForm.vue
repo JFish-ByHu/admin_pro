@@ -60,7 +60,7 @@ onMounted(() => {
   refreshCaptcha()
 })
 
-const handleRegister = () => {
+const submitRegister = () => {
   formRef.value?.validate(async valid => {
     if (valid) {
       if (!model.value.terms) {
@@ -125,7 +125,7 @@ const socialRegister = () => {
       :rules="rules"
       size="large"
       label-position="top"
-      @submit.prevent="handleRegister"
+      @submit.prevent="submitRegister"
     >
       <!-- 用户名输入 -->
       <el-form-item prop="username" label="Username">
