@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watchEffect } from 'vue'
 import { CirclePlus, Delete } from '@element-plus/icons-vue'
-import CommonFilter, { type FilterField } from '@/components/common/CommonFilter.vue'
+import CommonTableFilter, { type tableFilterField } from '@/components/common/CommonTableFilter.vue'
 import CommonTable, {
   type CommonTableColumn,
   type TablePagination
@@ -69,7 +69,7 @@ const query = reactive<UserQuery>({
 })
 
 // 筛选字段配置
-const filterFields: FilterField[] = [
+const filterFields: tableFilterField[] = [
   { prop: 'keyword', label: '关键词', type: 'input', placeholder: '用户名 / 昵称 / 邮箱' },
   { prop: 'role', label: '角色', type: 'select', options: roleOptions },
   { prop: 'status', label: '状态', type: 'select', options: statusOptions }
@@ -273,7 +273,7 @@ const columns: CommonTableColumn[] = [
 
 <template>
   <div class="user-info-page">
-    <CommonFilter
+    <CommonTableFilter
       v-model="query"
       :fields="filterFields"
       :loading="loading"

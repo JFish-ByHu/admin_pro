@@ -4,7 +4,7 @@ import { computed } from 'vue'
 /**
  * 筛选字段配置
  */
-export interface FilterField {
+export interface tableFilterField {
   /** 字段名，对应 modelValue 的 key */
   prop: string
   /** 标签文本 */
@@ -22,7 +22,7 @@ export interface FilterField {
 const props = withDefaults(
   defineProps<{
     /** 筛选字段配置列表 */
-    fields: FilterField[]
+    fields: tableFilterField[]
     /** 双向绑定的筛选条件对象 */
     modelValue: T
     /** 查询按钮加载状态 */
