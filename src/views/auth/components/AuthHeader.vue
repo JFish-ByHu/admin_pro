@@ -60,7 +60,7 @@ const appStore = useAppStore()
   .application-logo {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--auth-page-header-gap);
 
     .logo-text {
       font-weight: 800;
@@ -76,7 +76,7 @@ const appStore = useAppStore()
   .actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--auth-page-actions-gap);
 
     .action-btn {
       color: var(--t-regular);

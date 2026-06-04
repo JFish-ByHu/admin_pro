@@ -38,7 +38,7 @@ const emit = defineEmits<{
   justify-content: center;
   background-color: var(--bg-page);
   transition: background-color 0.3s ease;
-  padding: var(--layout-padding);
+  padding: var(--layout-page-padding-block) var(--layout-page-padding-inline);
   box-sizing: border-box;
 }
 
@@ -62,13 +62,13 @@ const emit = defineEmits<{
   text-align: center;
   max-width: 500px;
   z-index: 1;
-  padding: 0 var(--layout-padding);
+  padding: 0 var(--layout-page-padding-inline);
 
   .title {
     font-size: var(--font-size-xl);
     font-weight: 800;
     color: var(--t-primary);
-    margin-bottom: 16px;
+    margin-bottom: var(--space-4);
     letter-spacing: -0.5px;
     transition: color 0.3s ease;
   }
@@ -77,13 +77,13 @@ const emit = defineEmits<{
     font-size: var(--font-size-base);
     color: var(--t-secondary);
     line-height: 1.6;
-    margin-bottom: 32px;
+    margin-bottom: var(--space-8);
     transition: color 0.3s ease;
   }
 
   .action-btn {
     font-weight: 600;
-    padding: 0 32px;
+    padding: 0 var(--space-8);
     border-radius: var(--radius-md);
     background-color: var(--c-primary);
     border-color: var(--c-primary);

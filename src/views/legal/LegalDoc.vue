@@ -16,8 +16,8 @@ const fetchLegalContent = async (type: string) => {
   // 占位富文本数据，后期由后台CMS系统直接返回
   if (type === 'terms') {
     content.value = `
-      <h1 style="text-align: center; margin-bottom: 24px;">Terms of Service (服务条款)</h1>
-      <p style="text-align: center; color: #6b7280; margin-bottom: 40px;"><strong>生效日期：</strong> 2024年01月01日</p>
+      <h1 style="text-align: center; margin-bottom: var(--legal-page-title-margin-bottom);">Terms of Service (服务条款)</h1>
+      <p style="text-align: center; color: var(--t-secondary); margin-bottom: var(--legal-page-meta-margin-bottom);"><strong>生效日期：</strong> 2024年01月01日</p>
       
       <h2>1. 接受条款</h2>
       <p>欢迎使用我们的服务。通过访问或使用本网站，即表示您同意受本服务条款的约束。此内容后续将通过后台富文本编辑器进行动态配置和统一管理下发，方便法务或运营随时修改而无需发版。</p>
@@ -33,8 +33,8 @@ const fetchLegalContent = async (type: string) => {
     `
   } else if (type === 'privacy') {
     content.value = `
-      <h1 style="text-align: center; margin-bottom: 24px;">Privacy Policy (隐私政策)</h1>
-      <p style="text-align: center; color: #6b7280; margin-bottom: 40px;"><strong>更新日期：</strong> 2024年01月01日</p>
+      <h1 style="text-align: center; margin-bottom: var(--legal-page-title-margin-bottom);">Privacy Policy (隐私政策)</h1>
+      <p style="text-align: center; color: var(--t-secondary); margin-bottom: var(--legal-page-meta-margin-bottom);"><strong>更新日期：</strong> 2024年01月01日</p>
       
       <h2>1. 信息收集</h2>
       <p>我们非常重视您的隐私。为了提供更好的服务，我们可能会收集您的基本注册信息、设备信息以及使用数据。此页面结构已做好动态数据对接准备，后续文本由后台系统直接下发。</p>
@@ -79,7 +79,7 @@ watch(
 <style scoped lang="scss">
 .legal-page {
   min-height: 100vh;
-  padding: clamp(20px, 4vw, 40px) var(--layout-padding);
+  padding: var(--legal-page-padding-block) var(--legal-page-padding-inline);
   background-image: url('/src/assets/images/legal/legal_backgroud.png');
   background-size: cover;
   background-position: center;
@@ -90,7 +90,7 @@ watch(
     max-width: 800px;
     margin: 0 auto;
     background: var(--bg-white);
-    padding: clamp(24px, 4vw, 48px) clamp(20px, 5vw, 64px);
+    padding: var(--legal-page-card-padding-block) var(--legal-page-card-padding-inline);
     border-radius: var(--radius-lg);
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     min-height: 600px;

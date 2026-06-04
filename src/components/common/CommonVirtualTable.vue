@@ -221,14 +221,14 @@ const changePageSize = (size: number) => {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 32px 0;
+    padding: var(--space-8) 0;
   }
 
   // 分页区域
   &__footer {
     display: flex;
     justify-content: flex-end;
-    padding: clamp(10px, 1.2vw, 16px) var(--layout-padding);
+    padding: var(--card-padding-sm) var(--card-padding-md);
     border-top: 1px solid var(--border-light);
 
     @include respond-to(mobile) {

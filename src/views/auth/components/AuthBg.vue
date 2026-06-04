@@ -216,7 +216,7 @@ onUnmounted(() => {
   /* 眼睛容器 */
   .eyes-container {
     display: flex;
-    gap: clamp(10px, 2vw, 20px);
+    gap: var(--auth-page-panel-gap);
   }
 
   /* 嘴巴 */

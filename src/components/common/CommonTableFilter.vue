@@ -4,7 +4,7 @@ import { computed } from 'vue'
 /**
  * 筛选字段配置
  */
-export interface tableFilterField {
+export interface TableFilterField {
   /** 字段名，对应 modelValue 的 key */
   prop: string
   /** 标签文本 */
@@ -22,7 +22,7 @@ export interface tableFilterField {
 const props = withDefaults(
   defineProps<{
     /** 筛选字段配置列表 */
-    fields: tableFilterField[]
+    fields: TableFilterField[]
     /** 双向绑定的筛选条件对象 */
     modelValue: T
     /** 查询按钮加载状态 */
@@ -140,7 +140,7 @@ const resetFilters = () => {
 
 <style scoped lang="scss">
 .pro-filter {
-  padding: var(--layout-padding);
+  padding: var(--card-padding-md);
   background-color: var(--bg-white);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
@@ -150,7 +150,7 @@ const resetFilters = () => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--layout-gap);
+    gap: var(--card-gap-lg);
     flex-wrap: wrap;
   }
 
@@ -158,7 +158,7 @@ const resetFilters = () => {
   .filter-fields {
     display: flex;
     flex-wrap: wrap;
-    gap: clamp(8px, 1vw, 16px) var(--layout-gap);
+    gap: var(--card-gap-sm) var(--card-gap-lg);
     flex: 1;
     min-width: 0;
     align-items: center;
@@ -168,7 +168,7 @@ const resetFilters = () => {
     width: clamp(280px, 26vw, 360px);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
     min-width: 0;
 
     .filter-label {
@@ -195,6 +195,7 @@ const resetFilters = () => {
   .filter-actions {
     display: flex;
     align-items: center;
+    gap: var(--space-2);
     flex-shrink: 0;
     align-self: center;
   }
@@ -210,7 +211,7 @@ const resetFilters = () => {
       width: 100%;
       align-items: stretch;
       flex-direction: column;
-      gap: 8px;
+      gap: var(--space-2);
 
       .filter-label {
         width: auto;

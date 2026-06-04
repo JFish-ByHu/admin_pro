@@ -237,12 +237,12 @@ const forgetPassword = () => {
   margin: 0 auto;
 
   .header {
-    margin-bottom: clamp(20px, 3vw, 32px);
+    margin-bottom: var(--auth-page-section-margin-bottom);
 
     .title {
       font-size: var(--font-size-xl);
       font-weight: 800;
-      margin: 0 0 8px 0;
+      margin: 0 0 var(--space-2) 0;
       color: var(--t-primary-variant);
     }
 
@@ -256,7 +256,7 @@ const forgetPassword = () => {
   .otp-wrapper {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--auth-page-panel-gap);
     width: 100%;
     flex-wrap: wrap;
 
@@ -298,14 +298,14 @@ const forgetPassword = () => {
   }
 
   .form-terms {
-    margin-bottom: 24px;
+    margin-bottom: var(--form-item-margin-bottom);
   }
 
   .form-actions {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-top: 10px;
+    margin-top: clamp(8px, 1vw, 12px);
   }
 
   .forgot-link,

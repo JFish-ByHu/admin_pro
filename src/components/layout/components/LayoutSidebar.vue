@@ -135,7 +135,7 @@ const selectMenu = () => {
 
   .menu-scrollbar {
     flex: 1;
-    padding: 12px 8px;
+    padding: var(--space-3) var(--space-2);
 
     .layout-menu {
       border-right: none;
@@ -146,7 +146,7 @@ const selectMenu = () => {
         height: 44px;
         line-height: 44px;
         border-radius: var(--radius-md);
-        margin-bottom: 4px;
+        margin-bottom: var(--space-1);
         color: var(--t-regular);
         background-color: transparent;
         transition: all 0.2s ease;
@@ -172,7 +172,7 @@ const selectMenu = () => {
 
   &.is-collapse {
     .menu-scrollbar {
-      padding: 12px 8px;
+      padding: var(--space-3) var(--space-2);
 
       .layout-menu {
         width: 100%;
@@ -183,7 +183,7 @@ const selectMenu = () => {
           padding: 0 !important;
           width: 48px !important;
           height: 44px;
-          margin: 0 auto 8px auto;
+          margin: 0 auto var(--space-2) auto;
           justify-content: center;
           overflow: visible;
         }

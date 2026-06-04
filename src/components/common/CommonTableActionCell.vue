@@ -114,16 +114,16 @@ const triggerAction = (action: CommonTableActionItem) => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: var(--space-1);
     min-width: max-content;
 
     .is-dropdown {
-      margin-left: 12px;
+      margin-left: var(--space-3);
     }
   }
 
   &__more-icon {
-    margin-left: 4px;
+    margin-left: var(--space-1);
   }
 
   &__dropdown-trigger {

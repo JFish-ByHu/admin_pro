@@ -9,6 +9,59 @@
   --layout-header-height: 60px;
   --layout-padding: clamp(12px, 1.5vw, 20px);
   --layout-gap: clamp(12px, 1.2vw, 24px);
+
+  // --- 基础间距尺度 ---
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  // --- 页面 / 区块语义间距 ---
+  --layout-page-padding-block: var(--layout-padding);
+  --layout-page-padding-inline: var(--layout-padding);
+  --layout-page-gap: var(--layout-gap);
+  --layout-section-gap: clamp(16px, 1.4vw, 28px);
+  --layout-section-padding-block: 0;
+  --layout-section-padding-inline: 0;
+  --layout-section-margin-block: 0;
+
+  // --- 卡片 / 面板语义间距 ---
+  --card-padding-xs: clamp(8px, 1vw, 12px);
+  --card-padding-sm: clamp(10px, 1vw, 14px);
+  --card-padding-md: clamp(12px, 1vw, 16px);
+  --card-padding-lg: clamp(14px, 1vw, 18px);
+  --card-padding-xl: clamp(16px, 1.2vw, 20px);
+  --card-gap-sm: clamp(8px, 0.8vw, 12px);
+  --card-gap-md: clamp(10px, 1vw, 14px);
+  --card-gap-lg: clamp(12px, 1.2vw, 16px);
+  --card-header-gap: clamp(10px, 1vw, 14px);
+  --card-footer-gap: clamp(12px, 1.2vw, 16px);
+
+  // --- 表单语义间距 ---
+  --form-item-margin-bottom: clamp(20px, 2.2vw, 24px);
+  --form-section-gap: clamp(12px, 1.5vw, 16px);
+  --form-section-margin-bottom: clamp(20px, 3vw, 32px);
+
+  // --- Auth 页面变体 ---
+  --auth-page-shell-padding-block: clamp(20px, 4vw, 40px);
+  --auth-page-shell-padding-inline: clamp(24px, 5vw, 48px);
+  --auth-page-form-padding-bottom: clamp(32px, 6vw, 64px);
+  --auth-page-header-gap: clamp(8px, 1vw, 12px);
+  --auth-page-actions-gap: clamp(4px, 0.6vw, 8px);
+  --auth-page-panel-gap: clamp(10px, 1.4vw, 16px);
+  --auth-page-section-margin-bottom: clamp(20px, 3vw, 32px);
+
+  // --- Legal 页面变体 ---
+  --legal-page-padding-block: clamp(20px, 4vw, 40px);
+  --legal-page-padding-inline: clamp(12px, 3vw, 24px);
+  --legal-page-card-padding-block: clamp(24px, 4vw, 48px);
+  --legal-page-card-padding-inline: clamp(20px, 5vw, 64px);
+  --legal-page-title-margin-bottom: clamp(20px, 2.6vw, 24px);
+  --legal-page-meta-margin-bottom: clamp(28px, 4vw, 40px);
+
   --font-size-base: clamp(13px, 0.9vw, 15px);
   --font-size-lg: clamp(16px, 1.2vw, 20px);
   --font-size-xl: clamp(20px, 1.8vw, 32px);

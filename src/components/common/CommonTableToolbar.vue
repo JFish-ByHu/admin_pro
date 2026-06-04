@@ -99,13 +99,13 @@ const triggerAction = (action: CommonTableToolbarAction) => {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  padding: clamp(10px, 1.2vw, 10px) 0;
+  padding: var(--card-padding-sm) 0;
   background-color: transparent;
 
   &__summary {
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: var(--space-2);
     min-width: 0;
     color: var(--t-secondary);
     font-size: var(--font-size-base);
@@ -128,6 +128,7 @@ const triggerAction = (action: CommonTableToolbarAction) => {
   &__actions {
     display: flex;
     align-items: center;
+    gap: var(--space-2);
     flex-wrap: wrap;
   }
 

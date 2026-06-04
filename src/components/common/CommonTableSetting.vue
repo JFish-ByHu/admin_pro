@@ -148,14 +148,14 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
   &__content {
     display: flex;
     flex-direction: column;
-    gap: var(--layout-gap);
+    gap: var(--card-gap-lg);
   }
 
   &__section {
     display: flex;
     flex-direction: column;
-    gap: calc(var(--layout-gap) * 0.6);
-    padding: var(--layout-padding);
+    gap: var(--card-gap-md);
+    padding: var(--card-padding-md);
     background: var(--bg-page-light);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
@@ -178,7 +178,7 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   &__option--switch {
@@ -188,12 +188,12 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
   &__columns {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: calc(var(--layout-gap) * 0.5);
+    gap: var(--card-gap-sm);
   }
 
   &__column-item {
     min-width: 0;
-    padding: calc(var(--layout-padding) * 0.7);
+    padding: var(--card-padding-sm);
     background: var(--bg-page);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
@@ -206,7 +206,7 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
   }
 
   &__desc {
-    margin-top: 4px;
+    margin-top: var(--space-1);
     color: var(--t-secondary);
     font-size: calc(var(--font-size-base) * 0.9);
     line-height: 1.5;
@@ -214,11 +214,11 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
 
   :deep(.el-drawer__header) {
     margin-bottom: 0;
-    padding: var(--layout-padding);
+    padding: var(--card-padding-md);
   }
 
   :deep(.el-drawer__body) {
-    padding: var(--layout-padding);
+    padding: var(--card-padding-md);
     background: var(--bg-page);
   }
   @include respond-to(tablet-down) {

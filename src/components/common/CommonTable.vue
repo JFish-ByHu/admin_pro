@@ -662,7 +662,7 @@ onUpdated(() => {
   }
 
   &__header {
-    padding: 0 var(--layout-padding);
+    padding: 0 var(--card-padding-sm);
     border-bottom: 1px solid var(--border-light);
     background-color: var(--bg-white);
   }
@@ -670,7 +670,7 @@ onUpdated(() => {
   &__header-inner {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--space-3);
     min-width: 0;
   }
 
@@ -684,13 +684,13 @@ onUpdated(() => {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 32px 0;
+    padding: var(--space-8) 0;
   }
 
   &__footer {
     display: flex;
     justify-content: flex-end;
-    padding: clamp(10px, 1.2vw, 10px) var(--layout-padding);
+    padding: var(--card-padding-sm);
     border-top: 1px solid var(--border-light);
 
     @include respond-to(mobile) {

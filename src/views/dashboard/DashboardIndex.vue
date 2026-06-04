@@ -32,12 +32,12 @@
     :deep(.el-card__header) {
       border-bottom: 1px solid var(--border-light);
       background-color: rgba(0, 0, 0, 0.015);
-      padding: 16px 24px;
+      padding: var(--card-padding-md) var(--card-padding-xl);
     }
 
     /* 覆盖 Element Plus 默认卡片内容样式 */
     :deep(.el-card__body) {
-      padding: 32px 24px;
+      padding: var(--space-8) var(--card-padding-xl);
     }
 
     /* 适配暗黑模式的卡片头部 */
@@ -48,7 +48,7 @@
     .card-header {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: var(--card-header-gap);
       font-weight: 600;
       font-size: 16px;
       color: var(--t-primary);
@@ -62,7 +62,7 @@
     .welcome-content {
       h2 {
         margin-top: 0;
-        margin-bottom: 16px;
+        margin-bottom: var(--space-4);
         color: var(--t-primary);
         font-size: var(--font-size-xl);
         font-weight: 800;
@@ -72,13 +72,13 @@
       p {
         color: var(--t-secondary);
         line-height: 1.6;
-        margin-bottom: 32px;
+        margin-bottom: var(--space-8);
         font-size: var(--font-size-base);
       }
 
       .quick-links {
         display: flex;
-        gap: 16px;
+        gap: var(--card-gap-lg);
         flex-wrap: wrap;
       }
     }

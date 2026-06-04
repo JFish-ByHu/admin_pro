@@ -140,7 +140,7 @@ const runUserMenuCommand = (command: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--layout-padding);
+  padding: 0 var(--layout-page-padding-inline);
   background-color: var(--bg-white);
   border-bottom: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
@@ -171,7 +171,7 @@ const runUserMenuCommand = (command: string) => {
   .right-section {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
 
     .action-btn {
       color: var(--t-regular);
@@ -193,10 +193,10 @@ const runUserMenuCommand = (command: string) => {
     .user-profile {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--space-3);
       cursor: pointer;
       outline: none;
-      padding: 4px 8px;
+      padding: var(--space-1) var(--space-2);
       border-radius: var(--radius-sm);
       transition: background-color 0.2s;
 

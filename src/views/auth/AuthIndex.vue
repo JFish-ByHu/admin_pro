@@ -67,7 +67,7 @@ const switchAuthMode = (mode: 'login' | 'register') => {
     box-shadow: 10px 0 25px rgba(0, 0, 0, 0.05);
 
     .header-wrapper {
-      padding: clamp(20px, 4vw, 40px) clamp(24px, 5vw, 48px);
+      padding: var(--auth-page-shell-padding-block) var(--auth-page-shell-padding-inline);
       width: 100%;
       box-sizing: border-box;
     }
@@ -77,7 +77,7 @@ const switchAuthMode = (mode: 'login' | 'register') => {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 0 clamp(24px, 5vw, 48px) 64px;
+      padding: 0 var(--auth-page-shell-padding-inline) var(--auth-page-form-padding-bottom);
     }
   }
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, h, reactive, ref, watchEffect } from 'vue'
 import { CirclePlus, Delete } from '@element-plus/icons-vue'
-import CommonTableFilter, { type tableFilterField } from '@/components/common/CommonTableFilter.vue'
+import CommonTableFilter, { type TableFilterField } from '@/components/common/CommonTableFilter.vue'
 import CommonTable, {
   type CommonTableColumn,
   type CommonTableRowReorderPayload,
@@ -63,14 +63,14 @@ const generateMockUsers = (count: number): UserInfo[] => {
 const allUsers = ref<UserInfo[]>(generateMockUsers(86))
 
 // 筛选条件
-const query = reactive<UserQuery>({
+const query = ref<UserQuery>({
   keyword: '',
   role: '',
   status: ''
 })
 
 // 筛选字段配置
-const filterFields: tableFilterField[] = [
+const filterFields: TableFilterField[] = [
   { prop: 'keyword', label: '关键词', type: 'input', placeholder: '用户名 / 昵称 / 邮箱' },
   { prop: 'role', label: '角色', type: 'select', options: roleOptions },
   { prop: 'status', label: '状态', type: 'select', options: statusOptions }
@@ -89,7 +89,7 @@ const pagination = reactive<TablePagination>({
 })
 
 // 已应用的筛选条件（点击查询后生效）
-const appliedQuery = ref<UserQuery>({ ...query })
+const appliedQuery = ref<UserQuery>({ ...query.value })
 
 // 按筛选条件过滤后的完整列表
 const filteredUsers = computed(() => {
@@ -128,14 +128,14 @@ const mockRequest = () => {
 // 查询
 const searchUsers = () => {
   pagination.page = 1
-  appliedQuery.value = { ...query }
+  appliedQuery.value = { ...query.value }
   mockRequest()
 }
 
 // 重置
 const resetFilters = () => {
   pagination.page = 1
-  appliedQuery.value = { ...query }
+  appliedQuery.value = { ...query.value }
   mockRequest()
 }
 

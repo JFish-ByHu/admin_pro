@@ -24,7 +24,7 @@ const appStore = useAppStore()
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--layout-padding);
+  padding: var(--layout-page-padding-block) var(--layout-page-padding-inline);
   background-color: var(--bg-page);
   box-sizing: border-box;
 }

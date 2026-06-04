@@ -22,7 +22,7 @@ defineProps<{
 .user-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--card-header-gap);
 
   .user-avatar {
     flex-shrink: 0;

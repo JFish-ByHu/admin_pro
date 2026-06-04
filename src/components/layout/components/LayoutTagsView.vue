@@ -91,7 +91,7 @@ watch(
 .tags-view-container {
   display: flex;
   align-items: center;
-  padding: 6px var(--layout-padding);
+  padding: var(--space-2) var(--layout-page-padding-inline);
   background-color: var(--bg-white);
   border-top: 1px solid var(--border-light);
 
@@ -110,19 +110,19 @@ watch(
   .tags-view-list {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--space-2);
     min-width: max-content;
   }
 
   .tags-view-item {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
     cursor: pointer;
     user-select: none;
     height: 28px;
-    padding: 0 10px;
-    border-radius: 6px;
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-md);
     border: 1px solid transparent;
     background-color: var(--bg-page);
     color: var(--t-regular);
