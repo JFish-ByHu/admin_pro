@@ -195,16 +195,8 @@ const resetFilters = () => {
   .filter-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
     flex-shrink: 0;
     align-self: center;
-
-    :deep(.el-button) {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
   }
 
   @include respond-to(mobile) {

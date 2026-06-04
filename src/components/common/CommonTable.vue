@@ -14,6 +14,7 @@ import {
 import type { TableInstance } from 'element-plus'
 import Sortable, { type SortableEvent } from 'sortablejs'
 import CommonTableSetting, { type CommonTableSettingColumnOption } from './CommonTableSetting.vue'
+import { useTableSettingsStore } from '@/stores/tableSettings'
 
 /**
  * 分页配置
@@ -80,10 +81,14 @@ const props = withDefaults(
     selectable?: boolean
     /** 是否开启当前页行拖拽排序 */
     rowSortable?: boolean
+    /** 表格设置持久化唯一标识 */
+    settingsKey?: string
     /** 是否显示表格设置按钮 */
     showSettings?: boolean
     /** 是否允许在设置中切换拖拽排序 */
     configurableRowSortable?: boolean
+    /** 是否允许在设置中切换勾选列 */
+    configurableSelection?: boolean
     /** 是否允许在设置中控制列显隐 */
     configurableColumns?: boolean
     /** 已选中的行 key 列表 */
@@ -98,8 +103,10 @@ const props = withDefaults(
     pageSizes: () => [10, 20, 50, 100],
     selectable: false,
     rowSortable: false,
+    settingsKey: '',
     showSettings: false,
     configurableRowSortable: false,
+    configurableSelection: false,
     configurableColumns: false,
     selectedRowKeys: () => [],
     selectionWidth: 56
@@ -111,6 +118,7 @@ const emit = defineEmits<{
   (e: 'update:pageSize', size: number): void
   (e: 'update:selectedRowKeys', keys: Array<string | number>): void
   (e: 'update:rowSortable', value: boolean): void
+  (e: 'update:selectable', value: boolean): void
   (e: 'page-change'): void
   (e: 'selection-change', keys: Array<string | number>): void
   (e: 'row-reorder', payload: CommonTableRowReorderPayload): void
@@ -136,7 +144,9 @@ const rowSortableInstance = ref<Sortable | null>(null)
 const isRowSorting = ref(false)
 const settingsDrawerVisible = ref(false)
 const tableRowSortableEnabled = ref(props.rowSortable)
+const tableSelectionEnabled = ref(props.selectable)
 const visibleColumnKeys = ref<string[]>([])
+const tableSettingsStore = useTableSettingsStore()
 
 const ROW_SORTABLE_FILTER =
   '.el-button, .el-checkbox, .el-input, .el-input__inner, .el-select, .el-switch, a, button, input, textarea, [contenteditable="true"]'
@@ -164,14 +174,80 @@ const displayColumns = computed(() => {
   return normalizedColumns.value.filter(column => visibleKeySet.has(column.key))
 })
 
-const showTableSettings = computed(() => {
-  return props.showSettings && (props.configurableRowSortable || props.configurableColumns)
+const normalizedSettingsKey = computed(() => props.settingsKey.trim())
+
+const showSelectionColumn = computed(() => {
+  return props.selectable && tableSelectionEnabled.value
 })
+
+const showTableSettings = computed(() => {
+  return (
+    props.showSettings &&
+    (props.configurableRowSortable || props.configurableSelection || props.configurableColumns)
+  )
+})
+
+const getDefaultVisibleColumnKeys = () => normalizedColumns.value.map(column => column.key)
+
+const getDefaultTableSettings = () => ({
+  rowSortableEnabled: props.rowSortable,
+  selectionEnabled: props.selectable,
+  visibleColumnKeys: getDefaultVisibleColumnKeys()
+})
+
+const syncLocalColumnKeys = (nextKeys: string[], previousKeys: string[] = []) => {
+  if (!visibleColumnKeys.value.length) {
+    visibleColumnKeys.value = [...nextKeys]
+    return
+  }
+
+  const previousKeySet = new Set(previousKeys)
+  const currentVisibleKeySet = new Set(visibleColumnKeys.value)
+
+  visibleColumnKeys.value = nextKeys.filter(key => {
+    return currentVisibleKeySet.has(key) || !previousKeySet.has(key)
+  })
+}
+
+const syncSettingsState = (nextColumnKeys: string[]) => {
+  if (!normalizedSettingsKey.value) {
+    return
+  }
+
+  const persistedSettings = tableSettingsStore.getTableSettings(normalizedSettingsKey.value)
+
+  tableRowSortableEnabled.value =
+    props.rowSortable && (persistedSettings?.rowSortableEnabled ?? props.rowSortable)
+  tableSelectionEnabled.value =
+    props.selectable && (persistedSettings?.selectionEnabled ?? props.selectable)
+
+  const persistedVisibleColumnKeys = (persistedSettings?.visibleColumnKeys || []).filter(key =>
+    nextColumnKeys.includes(key)
+  )
+
+  visibleColumnKeys.value = persistedVisibleColumnKeys.length
+    ? nextColumnKeys.filter(key => persistedVisibleColumnKeys.includes(key))
+    : [...nextColumnKeys]
+}
 
 watch(
   () => props.rowSortable,
   value => {
-    tableRowSortableEnabled.value = value
+    if (!normalizedSettingsKey.value) {
+      tableRowSortableEnabled.value = value
+    }
+  },
+  {
+    immediate: true
+  }
+)
+
+watch(
+  () => props.selectable,
+  value => {
+    if (!normalizedSettingsKey.value) {
+      tableSelectionEnabled.value = value
+    }
   },
   {
     immediate: true
@@ -181,20 +257,47 @@ watch(
 watch(
   () => normalizedColumns.value.map(column => column.key),
   (nextKeys, previousKeys = []) => {
-    if (!visibleColumnKeys.value.length) {
-      visibleColumnKeys.value = [...nextKeys]
+    if (normalizedSettingsKey.value) {
+      syncSettingsState(nextKeys)
       return
     }
 
-    const previousKeySet = new Set(previousKeys)
-    const currentVisibleKeySet = new Set(visibleColumnKeys.value)
-
-    visibleColumnKeys.value = nextKeys.filter(key => {
-      return currentVisibleKeySet.has(key) || !previousKeySet.has(key)
-    })
+    syncLocalColumnKeys(nextKeys, previousKeys)
   },
   {
     immediate: true
+  }
+)
+
+watch(
+  () => [normalizedSettingsKey.value, props.rowSortable, props.selectable] as const,
+  () => {
+    if (!normalizedSettingsKey.value) {
+      return
+    }
+
+    syncSettingsState(normalizedColumns.value.map(column => column.key))
+  },
+  {
+    immediate: true
+  }
+)
+
+watch(
+  [tableRowSortableEnabled, tableSelectionEnabled, visibleColumnKeys, normalizedSettingsKey],
+  ([rowSortableEnabled, selectionEnabled, nextVisibleColumnKeys, settingsKey]) => {
+    if (!settingsKey) {
+      return
+    }
+
+    tableSettingsStore.setTableSettings(settingsKey, {
+      rowSortableEnabled,
+      selectionEnabled,
+      visibleColumnKeys: [...nextVisibleColumnKeys]
+    })
+  },
+  {
+    deep: true
   }
 )
 
@@ -203,7 +306,7 @@ const getRowKey = (row: Record<string, unknown>) => {
 }
 
 const syncSelectionState = async () => {
-  if (!props.selectable || !tableRef.value) {
+  if (!showSelectionColumn.value || !tableRef.value) {
     return
   }
 
@@ -289,12 +392,34 @@ const updateTableRowSortable = (value: boolean) => {
   emit('update:rowSortable', value)
 }
 
+const updateTableSelection = (value: boolean) => {
+  tableSelectionEnabled.value = value
+  emit('update:selectable', value)
+
+  if (!value) {
+    tableRef.value?.clearSelection()
+    updateSelectedRowKeys([])
+  }
+}
+
 const updateVisibleColumnKeys = (nextKeys: string[]) => {
   const validKeySet = new Set(normalizedColumns.value.map(column => column.key))
 
   visibleColumnKeys.value = normalizedColumns.value
     .map(column => column.key)
     .filter(key => validKeySet.has(key) && nextKeys.includes(key))
+}
+
+const resetTableSettings = () => {
+  const defaultSettings = getDefaultTableSettings()
+
+  tableRowSortableEnabled.value = defaultSettings.rowSortableEnabled
+  updateTableSelection(defaultSettings.selectionEnabled)
+  visibleColumnKeys.value = [...defaultSettings.visibleColumnKeys]
+
+  if (normalizedSettingsKey.value) {
+    tableSettingsStore.resetTableSettings(normalizedSettingsKey.value)
+  }
 }
 
 const destroyRowSortable = () => {
@@ -415,10 +540,14 @@ onUpdated(() => {
           v-model="settingsDrawerVisible"
           :row-sortable-enabled="tableRowSortableEnabled"
           :show-row-sortable-switch="configurableRowSortable"
+          :selection-enabled="tableSelectionEnabled"
+          :show-selection-switch="configurableSelection && selectable"
           :column-options="configurableColumns ? settingColumnOptions : []"
           :visible-column-keys="visibleColumnKeys"
           @update:row-sortable-enabled="updateTableRowSortable"
+          @update:selection-enabled="updateTableSelection"
           @update:visible-column-keys="updateVisibleColumnKeys"
+          @reset="resetTableSettings"
         />
 
         <div v-if="$slots.header" class="common-table__header-content">
@@ -451,7 +580,7 @@ onUpdated(() => {
         </el-table-column>
 
         <el-table-column
-          v-if="selectable"
+          v-if="showSelectionColumn"
           type="selection"
           :width="selectionWidth"
           fixed="left"

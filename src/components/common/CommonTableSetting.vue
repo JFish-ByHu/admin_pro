@@ -12,6 +12,8 @@ const props = withDefaults(
     modelValue?: boolean
     rowSortableEnabled?: boolean
     showRowSortableSwitch?: boolean
+    selectionEnabled?: boolean
+    showSelectionSwitch?: boolean
     columnOptions?: CommonTableSettingColumnOption[]
     visibleColumnKeys?: string[]
   }>(),
@@ -19,6 +21,8 @@ const props = withDefaults(
     modelValue: false,
     rowSortableEnabled: false,
     showRowSortableSwitch: false,
+    selectionEnabled: false,
+    showSelectionSwitch: false,
     columnOptions: () => [],
     visibleColumnKeys: () => []
   }
@@ -27,7 +31,9 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'update:rowSortableEnabled', value: boolean): void
+  (e: 'update:selectionEnabled', value: boolean): void
   (e: 'update:visibleColumnKeys', value: string[]): void
+  (e: 'reset'): void
 }>()
 
 const drawerVisible = computed({
@@ -41,8 +47,8 @@ const openDrawer = () => {
   drawerVisible.value = true
 }
 
-const closeDrawer = () => {
-  drawerVisible.value = false
+const resetSettings = () => {
+  emit('reset')
 }
 
 const updateVisibleColumnKeys = (nextKeys: Array<string | number>) => {
@@ -51,6 +57,10 @@ const updateVisibleColumnKeys = (nextKeys: Array<string | number>) => {
 
 const updateRowSortableEnabled = (value: string | number | boolean) => {
   emit('update:rowSortableEnabled', Boolean(value))
+}
+
+const updateSelectionEnabled = (value: string | number | boolean) => {
+  emit('update:selectionEnabled', Boolean(value))
 }
 </script>
 
@@ -68,16 +78,34 @@ const updateRowSortableEnabled = (value: string | number | boolean) => {
 
     <el-drawer v-model="drawerVisible" title="表格设置" :size="520" destroy-on-close>
       <div class="common-table-setting__content">
-        <section v-if="showRowSortableSwitch" class="common-table-setting__section">
-          <div class="common-table-setting__heading">排序设置</div>
+        <section
+          v-if="showRowSortableSwitch || showSelectionSwitch"
+          class="common-table-setting__section"
+        >
+          <div class="common-table-setting__heading">功能设置</div>
           <div class="common-table-setting__option common-table-setting__option--switch">
             <div>
               <div class="common-table-setting__label">开启拖拽排序</div>
               <div class="common-table-setting__desc">关闭后隐藏拖拽列，表格恢复普通浏览模式</div>
             </div>
             <el-switch
+              v-if="showRowSortableSwitch"
               :model-value="rowSortableEnabled"
               @update:model-value="updateRowSortableEnabled"
+            />
+          </div>
+
+          <div
+            v-if="showSelectionSwitch"
+            class="common-table-setting__option common-table-setting__option--switch"
+          >
+            <div>
+              <div class="common-table-setting__label">显示勾选列</div>
+              <div class="common-table-setting__desc">关闭后隐藏多选勾选列，表格仅保留浏览模式</div>
+            </div>
+            <el-switch
+              :model-value="selectionEnabled"
+              @update:model-value="updateSelectionEnabled"
             />
           </div>
         </section>
@@ -99,13 +127,11 @@ const updateRowSortableEnabled = (value: string | number | boolean) => {
             </div>
           </el-checkbox-group>
         </section>
-      </div>
 
-      <template #footer>
         <div class="common-table-setting__footer">
-          <el-button @click="closeDrawer">关闭</el-button>
+          <el-button plain color="var(--t-info)" @click="resetSettings">恢复默认配置</el-button>
         </div>
-      </template>
+      </div>
     </el-drawer>
   </div>
 </template>
@@ -134,6 +160,11 @@ const updateRowSortableEnabled = (value: string | number | boolean) => {
     border: 1px solid var(--border-light);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
   }
 
   &__heading {
@@ -181,27 +212,15 @@ const updateRowSortableEnabled = (value: string | number | boolean) => {
     line-height: 1.5;
   }
 
-  &__footer {
-    display: flex;
-    justify-content: flex-end;
-  }
-
   :deep(.el-drawer__header) {
     margin-bottom: 0;
     padding: var(--layout-padding);
-    // border-bottom: 1px solid var(--border-light);
   }
 
   :deep(.el-drawer__body) {
     padding: var(--layout-padding);
     background: var(--bg-page);
   }
-
-  :deep(.el-drawer__footer) {
-    padding: var(--layout-padding);
-    background: var(--bg-page);
-  }
-
   @include respond-to(tablet-down) {
     &__columns {
       grid-template-columns: repeat(2, minmax(0, 1fr));

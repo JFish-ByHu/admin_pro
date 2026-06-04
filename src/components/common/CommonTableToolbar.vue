@@ -98,7 +98,6 @@ const triggerAction = (action: CommonTableToolbarAction) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--layout-gap);
   flex-wrap: wrap;
   padding: clamp(10px, 1.2vw, 10px) 0;
   background-color: transparent;
@@ -129,7 +128,6 @@ const triggerAction = (action: CommonTableToolbarAction) => {
   &__actions {
     display: flex;
     align-items: center;
-    gap: 10px;
     flex-wrap: wrap;
   }
 

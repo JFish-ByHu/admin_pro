@@ -316,8 +316,10 @@ const baseColumns: CommonTableColumn[] = [
       :data="tableData"
       :loading="loading"
       :pagination="pagination"
+      settings-key="user-info-table"
       show-settings
       configurable-row-sortable
+      configurable-selection
       configurable-columns
       selectable
       @page-change="refreshPageData"

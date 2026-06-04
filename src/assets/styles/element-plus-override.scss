@@ -147,3 +147,9 @@
     }
   }
 }
+
+/** 覆盖 el-switch 的样式 */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--c-info) !important;
+  border-color: var(--c-info) !important;
+}
