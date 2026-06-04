@@ -4,6 +4,7 @@ import { CirclePlus, Delete } from '@element-plus/icons-vue'
 import CommonTableFilter, { type tableFilterField } from '@/components/common/CommonTableFilter.vue'
 import CommonTable, {
   type CommonTableColumn,
+  type CommonTableRowReorderPayload,
   type TablePagination
 } from '@/components/common/CommonTable.vue'
 import CommonTableToolbar, {
@@ -196,6 +197,23 @@ const deleteSelectedUsers = () => {
     .catch(() => {})
 }
 
+const reorderCurrentPageUsers = (payload: CommonTableRowReorderPayload) => {
+  const reorderedRows = payload.currentPageData.map(row => toUserRow(row))
+  const reorderedIdSet = new Set(reorderedRows.map(row => row.id))
+  let nextIndex = 0
+
+  allUsers.value = allUsers.value.map(user => {
+    if (!reorderedIdSet.has(user.id)) {
+      return user
+    }
+
+    const nextRow = reorderedRows[nextIndex]
+    nextIndex += 1
+
+    return nextRow || user
+  })
+}
+
 const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
   return [
     {
@@ -296,8 +314,10 @@ const columns: CommonTableColumn[] = [
       :data="tableData"
       :loading="loading"
       :pagination="pagination"
+      row-sortable
       selectable
       @page-change="refreshPageData"
+      @row-reorder="reorderCurrentPageUsers"
     >
       <template #header>
         <CommonTableToolbar :actions="toolbarActions">

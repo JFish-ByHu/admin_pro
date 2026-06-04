@@ -8,6 +8,6 @@ defineProps<{
 
 <template>
   <el-tag :type="status === 'enabled' ? 'success' : 'info'" effect="light">
-    {{ status === 'enabled' ? 'enabled' : 'banned' }}
+    {{ status === 'enabled' ? '启用' : '禁用' }}
   </el-tag>
 </template>

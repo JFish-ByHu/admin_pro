@@ -3,12 +3,16 @@ import {
   computed,
   defineComponent,
   nextTick,
+  onMounted,
+  onBeforeUnmount,
+  onUpdated,
   ref,
   watch,
   type PropType,
   type VNodeChild
 } from 'vue'
 import type { TableInstance } from 'element-plus'
+import Sortable, { type SortableEvent } from 'sortablejs'
 
 /**
  * 分页配置
@@ -45,6 +49,13 @@ export interface CommonTableHeaderScope {
   column: CommonTableColumn
 }
 
+export interface CommonTableRowReorderPayload {
+  oldIndex: number
+  newIndex: number
+  movedRow: Record<string, unknown>
+  currentPageData: Record<string, unknown>[]
+}
+
 interface NormalizedColumn extends CommonTableColumn {
   prop: string
   label: string
@@ -66,6 +77,8 @@ const props = withDefaults(
     pageSizes?: number[]
     /** 是否开启选择列 */
     selectable?: boolean
+    /** 是否开启当前页行拖拽排序 */
+    rowSortable?: boolean
     /** 已选中的行 key 列表 */
     selectedRowKeys?: Array<string | number>
     /** 选择列宽度 */
@@ -77,6 +90,7 @@ const props = withDefaults(
     pagination: undefined,
     pageSizes: () => [10, 20, 50, 100],
     selectable: false,
+    rowSortable: false,
     selectedRowKeys: () => [],
     selectionWidth: 56
   }
@@ -88,6 +102,7 @@ const emit = defineEmits<{
   (e: 'update:selectedRowKeys', keys: Array<string | number>): void
   (e: 'page-change'): void
   (e: 'selection-change', keys: Array<string | number>): void
+  (e: 'row-reorder', payload: CommonTableRowReorderPayload): void
 }>()
 
 const RenderVNode = defineComponent({
@@ -105,6 +120,14 @@ const RenderVNode = defineComponent({
 
 const tableRef = ref<TableInstance>()
 const isSyncingSelection = ref(false)
+const tableRootRef = ref<HTMLDivElement | null>(null)
+const rowSortableInstance = ref<Sortable | null>(null)
+const isRowSorting = ref(false)
+
+const ROW_SORTABLE_FILTER =
+  '.el-button, .el-checkbox, .el-input, .el-input__inner, .el-select, .el-switch, a, button, input, textarea, [contenteditable="true"]'
+
+const waitForNextFrame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 
 const normalizedColumns = computed<NormalizedColumn[]>(() => {
   return props.columns.map(column => ({
@@ -153,6 +176,111 @@ const updateSelectedRowKeys = (keys: Array<string | number>) => {
   emit('selection-change', keys)
 }
 
+const buildReorderedCurrentPageData = (oldIndex: number, newIndex: number) => {
+  const currentPageData = [...props.data]
+  const movedRow = currentPageData[oldIndex]
+
+  if (!movedRow) {
+    return null
+  }
+
+  currentPageData.splice(oldIndex, 1)
+  currentPageData.splice(newIndex, 0, movedRow)
+
+  return {
+    movedRow,
+    currentPageData
+  }
+}
+
+const emitRowReorder = (event: SortableEvent) => {
+  const { oldIndex, newIndex } = event
+
+  if (oldIndex == null || newIndex == null || oldIndex === newIndex) {
+    return
+  }
+
+  const reorderedResult = buildReorderedCurrentPageData(oldIndex, newIndex)
+
+  if (!reorderedResult) {
+    return
+  }
+
+  emit('row-reorder', {
+    oldIndex,
+    newIndex,
+    movedRow: reorderedResult.movedRow,
+    currentPageData: reorderedResult.currentPageData
+  })
+}
+
+const startRowSorting = () => {
+  isRowSorting.value = true
+}
+
+const finishRowSorting = (event: SortableEvent) => {
+  isRowSorting.value = false
+  emitRowReorder(event)
+}
+
+const destroyRowSortable = () => {
+  rowSortableInstance.value?.destroy()
+  rowSortableInstance.value = null
+}
+
+const resolveTableBody = async () => {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const tableBody = tableRootRef.value?.querySelector('.el-table__body-wrapper tbody')
+
+    if (tableBody) {
+      return tableBody as HTMLElement
+    }
+
+    await nextTick()
+    await waitForNextFrame()
+  }
+
+  return null
+}
+
+const initRowSortable = async () => {
+  if (isRowSorting.value) {
+    return
+  }
+
+  destroyRowSortable()
+
+  if (!props.rowSortable || !tableRootRef.value || !props.data.length) {
+    return
+  }
+
+  await nextTick()
+  await waitForNextFrame()
+
+  const tableBody = await resolveTableBody()
+
+  if (!tableBody) {
+    return
+  }
+
+  rowSortableInstance.value = Sortable.create(tableBody as HTMLElement, {
+    animation: 180,
+    draggable: '.el-table__row',
+    handle: '.common-table__drag-handle',
+    forceFallback: true,
+    fallbackOnBody: true,
+    fallbackTolerance: 4,
+    ghostClass: 'is-row-sortable-ghost',
+    chosenClass: 'is-row-sortable-chosen',
+    dragClass: 'is-row-sortable-drag',
+    fallbackClass: 'is-row-sortable-fallback',
+    filter: ROW_SORTABLE_FILTER,
+    preventOnFilter: false,
+    onStart: startRowSorting,
+    onEnd: finishRowSorting
+  })
+}
+
 const syncSelectionRows = (rows: Record<string, unknown>[]) => {
   if (isSyncingSelection.value) {
     return
@@ -186,10 +314,26 @@ const changePageSize = (size: number) => {
   emit('update:pageSize', size)
   emit('page-change')
 }
+
+onBeforeUnmount(() => {
+  destroyRowSortable()
+})
+
+onMounted(() => {
+  void initRowSortable()
+})
+
+onUpdated(() => {
+  void initRowSortable()
+})
 </script>
 
 <template>
-  <div class="common-table">
+  <div
+    ref="tableRootRef"
+    class="common-table"
+    :class="{ 'is-row-sortable': rowSortable, 'is-row-sorting': isRowSorting }"
+  >
     <div v-if="$slots.header" class="common-table__header">
       <slot name="header" />
     </div>
@@ -203,6 +347,20 @@ const changePageSize = (size: number) => {
         style="width: 100%"
         @selection-change="syncSelectionRows"
       >
+        <el-table-column v-if="rowSortable" width="44" align="center" fixed="left">
+          <template #header>
+            <el-tooltip content="拖拽排序手柄列" placement="top">
+              <span class="common-table__drag-header" title="拖拽排序列" aria-label="拖拽排序列" />
+            </el-tooltip>
+          </template>
+
+          <template #default>
+            <el-tooltip content="拖拽排序" placement="top">
+              <span class="common-table__drag-handle" title="拖拽排序" aria-label="拖拽排序" />
+            </el-tooltip>
+          </template>
+        </el-table-column>
+
         <el-table-column
           v-if="selectable"
           type="selection"
@@ -310,6 +468,44 @@ const changePageSize = (size: number) => {
     }
   }
 
+  &__drag-handle {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    cursor: grab;
+    opacity: 0.78;
+    transition:
+      background-color 0.2s ease,
+      opacity 0.2s ease,
+      transform 0.2s ease;
+    background-image:
+      radial-gradient(circle, currentColor 1.2px, transparent 1.3px),
+      radial-gradient(circle, currentColor 1.2px, transparent 1.3px);
+    background-position:
+      4px 3px,
+      10px 3px;
+    background-repeat: repeat-y;
+    background-size: 6px 6px;
+    color: var(--t-secondary);
+  }
+
+  &__drag-header {
+    display: inline-flex;
+    width: 14px;
+    height: 14px;
+    opacity: 0.42;
+    background-image:
+      radial-gradient(circle, currentColor 1px, transparent 1.1px),
+      radial-gradient(circle, currentColor 1px, transparent 1.1px);
+    background-position:
+      3px 2px,
+      8px 2px;
+    background-repeat: repeat-y;
+    background-size: 5px 5px;
+    color: var(--t-secondary);
+  }
+
   :deep(.el-table) {
     --el-table-border-color: var(--border-light);
     --el-table-header-bg-color: var(--bg-page);
@@ -337,6 +533,45 @@ const changePageSize = (size: number) => {
 
   :deep(.el-table .cell) {
     font-size: var(--font-size-base);
+  }
+
+  &.is-row-sortable {
+    :deep(.el-table__row:hover .common-table__drag-handle) {
+      opacity: 1;
+      background-color: var(--bg-hover);
+      color: var(--t-primary);
+    }
+
+    :deep(.el-table__row .common-table__drag-handle:active) {
+      cursor: grabbing;
+      transform: scale(0.96);
+    }
+
+    :deep(.is-row-sortable-ghost td) {
+      background-color: var(--bg-hover);
+      opacity: 0.5;
+    }
+
+    :deep(.is-row-sortable-chosen td) {
+      background-color: var(--c-primary-bg);
+    }
+
+    :deep(.is-row-sortable-drag td),
+    :deep(.is-row-sortable-fallback td) {
+      background-color: var(--bg-white);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+
+  &.is-row-sorting {
+    :deep(.el-table__body tr:hover > td.el-table__cell),
+    :deep(.el-table__body tr.hover-row > td.el-table__cell) {
+      background-color: var(--bg-white) !important;
+    }
+
+    :deep(.common-table__drag-handle) {
+      cursor: grabbing;
+    }
   }
 
   :deep(.el-checkbox) {

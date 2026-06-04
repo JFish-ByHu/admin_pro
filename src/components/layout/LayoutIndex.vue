@@ -22,19 +22,15 @@ const appStore = useAppStore()
     >
       <LayoutSidebar :is-collapse="false" />
     </el-drawer>
-
     <!-- 桌面/平板侧边栏 -->
     <LayoutSidebar v-else :is-collapse="appStore.sidebarCollapse" />
-
     <el-container class="main-wrapper">
       <!-- 顶部导航 -->
       <el-header height="60px" class="layout-header">
         <LayoutHeader />
       </el-header>
-
       <!-- 标签视图 -->
       <LayoutTagsView />
-
       <!-- 主内容区 -->
       <AppMain />
     </el-container>
