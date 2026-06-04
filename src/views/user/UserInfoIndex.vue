@@ -79,6 +79,7 @@ const filterFields: tableFilterField[] = [
 // 加载状态
 const loading = ref(false)
 const selectedRowKeys = ref<Array<string | number>>([])
+const isTableRowSortable = ref(true)
 
 // 分页
 const pagination = reactive<TablePagination>({
@@ -245,7 +246,7 @@ const toolbarSummaryText = computed(() => {
 
 const toUserRow = (rowData: Record<string, unknown>) => rowData as unknown as UserInfo
 // 普通表格列配置
-const columns: CommonTableColumn[] = [
+const baseColumns: CommonTableColumn[] = [
   {
     key: 'index',
     title: '序号',
@@ -310,11 +311,14 @@ const columns: CommonTableColumn[] = [
       v-model:page="pagination.page"
       v-model:page-size="pagination.pageSize"
       v-model:selected-row-keys="selectedRowKeys"
-      :columns="columns"
+      v-model:row-sortable="isTableRowSortable"
+      :columns="baseColumns"
       :data="tableData"
       :loading="loading"
       :pagination="pagination"
-      row-sortable
+      show-settings
+      configurable-row-sortable
+      configurable-columns
       selectable
       @page-change="refreshPageData"
       @row-reorder="reorderCurrentPageUsers"

@@ -87,6 +87,8 @@ const triggerAction = (action: CommonTableToolbarAction) => {
       >
         {{ action.label }}
       </el-button>
+
+      <slot name="actions-after" />
     </div>
   </div>
 </template>

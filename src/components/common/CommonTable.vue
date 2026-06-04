@@ -13,6 +13,7 @@ import {
 } from 'vue'
 import type { TableInstance } from 'element-plus'
 import Sortable, { type SortableEvent } from 'sortablejs'
+import CommonTableSetting, { type CommonTableSettingColumnOption } from './CommonTableSetting.vue'
 
 /**
  * 分页配置
@@ -79,6 +80,12 @@ const props = withDefaults(
     selectable?: boolean
     /** 是否开启当前页行拖拽排序 */
     rowSortable?: boolean
+    /** 是否显示表格设置按钮 */
+    showSettings?: boolean
+    /** 是否允许在设置中切换拖拽排序 */
+    configurableRowSortable?: boolean
+    /** 是否允许在设置中控制列显隐 */
+    configurableColumns?: boolean
     /** 已选中的行 key 列表 */
     selectedRowKeys?: Array<string | number>
     /** 选择列宽度 */
@@ -91,6 +98,9 @@ const props = withDefaults(
     pageSizes: () => [10, 20, 50, 100],
     selectable: false,
     rowSortable: false,
+    showSettings: false,
+    configurableRowSortable: false,
+    configurableColumns: false,
     selectedRowKeys: () => [],
     selectionWidth: 56
   }
@@ -100,6 +110,7 @@ const emit = defineEmits<{
   (e: 'update:page', page: number): void
   (e: 'update:pageSize', size: number): void
   (e: 'update:selectedRowKeys', keys: Array<string | number>): void
+  (e: 'update:rowSortable', value: boolean): void
   (e: 'page-change'): void
   (e: 'selection-change', keys: Array<string | number>): void
   (e: 'row-reorder', payload: CommonTableRowReorderPayload): void
@@ -123,6 +134,9 @@ const isSyncingSelection = ref(false)
 const tableRootRef = ref<HTMLDivElement | null>(null)
 const rowSortableInstance = ref<Sortable | null>(null)
 const isRowSorting = ref(false)
+const settingsDrawerVisible = ref(false)
+const tableRowSortableEnabled = ref(props.rowSortable)
+const visibleColumnKeys = ref<string[]>([])
 
 const ROW_SORTABLE_FILTER =
   '.el-button, .el-checkbox, .el-input, .el-input__inner, .el-select, .el-switch, a, button, input, textarea, [contenteditable="true"]'
@@ -136,6 +150,53 @@ const normalizedColumns = computed<NormalizedColumn[]>(() => {
     label: column.label ?? column.title ?? ''
   }))
 })
+
+const settingColumnOptions = computed<CommonTableSettingColumnOption[]>(() => {
+  return normalizedColumns.value.map(column => ({
+    key: column.key,
+    label: column.label || column.prop || column.key
+  }))
+})
+
+const displayColumns = computed(() => {
+  const visibleKeySet = new Set(visibleColumnKeys.value)
+
+  return normalizedColumns.value.filter(column => visibleKeySet.has(column.key))
+})
+
+const showTableSettings = computed(() => {
+  return props.showSettings && (props.configurableRowSortable || props.configurableColumns)
+})
+
+watch(
+  () => props.rowSortable,
+  value => {
+    tableRowSortableEnabled.value = value
+  },
+  {
+    immediate: true
+  }
+)
+
+watch(
+  () => normalizedColumns.value.map(column => column.key),
+  (nextKeys, previousKeys = []) => {
+    if (!visibleColumnKeys.value.length) {
+      visibleColumnKeys.value = [...nextKeys]
+      return
+    }
+
+    const previousKeySet = new Set(previousKeys)
+    const currentVisibleKeySet = new Set(visibleColumnKeys.value)
+
+    visibleColumnKeys.value = nextKeys.filter(key => {
+      return currentVisibleKeySet.has(key) || !previousKeySet.has(key)
+    })
+  },
+  {
+    immediate: true
+  }
+)
 
 const getRowKey = (row: Record<string, unknown>) => {
   return row[props.rowKey] as string | number
@@ -223,6 +284,19 @@ const finishRowSorting = (event: SortableEvent) => {
   emitRowReorder(event)
 }
 
+const updateTableRowSortable = (value: boolean) => {
+  tableRowSortableEnabled.value = value
+  emit('update:rowSortable', value)
+}
+
+const updateVisibleColumnKeys = (nextKeys: string[]) => {
+  const validKeySet = new Set(normalizedColumns.value.map(column => column.key))
+
+  visibleColumnKeys.value = normalizedColumns.value
+    .map(column => column.key)
+    .filter(key => validKeySet.has(key) && nextKeys.includes(key))
+}
+
 const destroyRowSortable = () => {
   rowSortableInstance.value?.destroy()
   rowSortableInstance.value = null
@@ -250,7 +324,7 @@ const initRowSortable = async () => {
 
   destroyRowSortable()
 
-  if (!props.rowSortable || !tableRootRef.value || !props.data.length) {
+  if (!tableRowSortableEnabled.value || !tableRootRef.value || !props.data.length) {
     return
   }
 
@@ -332,10 +406,25 @@ onUpdated(() => {
   <div
     ref="tableRootRef"
     class="common-table"
-    :class="{ 'is-row-sortable': rowSortable, 'is-row-sorting': isRowSorting }"
+    :class="{ 'is-row-sortable': tableRowSortableEnabled, 'is-row-sorting': isRowSorting }"
   >
-    <div v-if="$slots.header" class="common-table__header">
-      <slot name="header" />
+    <div v-if="$slots.header || showTableSettings" class="common-table__header">
+      <div class="common-table__header-inner">
+        <CommonTableSetting
+          v-if="showTableSettings"
+          v-model="settingsDrawerVisible"
+          :row-sortable-enabled="tableRowSortableEnabled"
+          :show-row-sortable-switch="configurableRowSortable"
+          :column-options="configurableColumns ? settingColumnOptions : []"
+          :visible-column-keys="visibleColumnKeys"
+          @update:row-sortable-enabled="updateTableRowSortable"
+          @update:visible-column-keys="updateVisibleColumnKeys"
+        />
+
+        <div v-if="$slots.header" class="common-table__header-content">
+          <slot name="header" />
+        </div>
+      </div>
     </div>
 
     <div v-loading="loading" class="common-table__main">
@@ -347,7 +436,7 @@ onUpdated(() => {
         style="width: 100%"
         @selection-change="syncSelectionRows"
       >
-        <el-table-column v-if="rowSortable" width="44" align="center" fixed="left">
+        <el-table-column v-if="tableRowSortableEnabled" width="44" align="center" fixed="left">
           <template #header>
             <el-tooltip content="拖拽排序手柄列" placement="top">
               <span class="common-table__drag-header" title="拖拽排序列" aria-label="拖拽排序列" />
@@ -371,7 +460,7 @@ onUpdated(() => {
         />
 
         <el-table-column
-          v-for="column in normalizedColumns"
+          v-for="column in displayColumns"
           :key="column.key"
           :prop="column.prop"
           :label="column.label"
@@ -447,6 +536,18 @@ onUpdated(() => {
     padding: 0 var(--layout-padding);
     border-bottom: 1px solid var(--border-light);
     background-color: var(--bg-white);
+  }
+
+  &__header-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__header-content {
+    flex: 1;
+    min-width: 0;
   }
 
   &__empty {
