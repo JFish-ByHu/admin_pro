@@ -6,11 +6,12 @@ import {
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository, In } from 'typeorm'
-import * as bcrypt from 'bcryptjs'
 import { User } from './entities/user.entity'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
+import { PasswordUtil } from '../../common/utils/password.util'
+import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
 
 @Injectable()
 export class UserService {
@@ -18,6 +19,24 @@ export class UserService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>
   ) {}
+
+  private toUserResponseDto(user: User): UserResponseDto {
+    const { passwordHash, ...result } = user
+    void passwordHash
+
+    return {
+      id: result.id,
+      username: result.username,
+      email: result.email,
+      nickname: result.nickname,
+      avatarUrl: result.avatarUrl,
+      role: result.role,
+      isActive: result.isActive,
+      createTime: result.createTime,
+      updateTime: result.updateTime,
+      lastLoginAt: result.lastLoginAt
+    }
+  }
 
   // ─── 内部通用方法 ────────────────────────────────────────────────────────────
 
@@ -55,7 +74,7 @@ export class UserService {
    * 分页查询用户列表
    * 支持关键词（用户名/昵称/邮箱）、角色、状态筛选
    */
-  async findAll(query: QueryUserDto) {
+  async findAll(query: QueryUserDto): Promise<UserListResponseDto> {
     const { keyword, role, status, page = 1, pageSize = 20 } = query
 
     const qb = this.userRepository
@@ -95,7 +114,7 @@ export class UserService {
       .getMany()
 
     return {
-      list,
+      list: list.map(user => this.toUserResponseDto(user)),
       total,
       page,
       pageSize
@@ -105,7 +124,7 @@ export class UserService {
   /**
    * 查询单个用户详情（不返回密码）
    */
-  async findOne(id: string): Promise<Omit<User, 'passwordHash'>> {
+  async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id },
       select: {
@@ -126,13 +145,13 @@ export class UserService {
       throw new NotFoundException(`用户 ${id} 不存在`)
     }
 
-    return user
+    return this.toUserResponseDto(user)
   }
 
   /**
    * 创建用户
    */
-  async createUser(dto: CreateUserDto): Promise<Omit<User, 'passwordHash'>> {
+  async createUser(dto: CreateUserDto): Promise<UserResponseDto> {
     const exists = await this.checkUserExists(dto.username, dto.email)
     if (exists) {
       throw new ConflictException(
@@ -140,7 +159,7 @@ export class UserService {
       )
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10)
+    const passwordHash = await PasswordUtil.hash(dto.password)
 
     const user = this.userRepository.create({
       username: dto.username,
@@ -154,15 +173,13 @@ export class UserService {
 
     const saved = await this.userRepository.save(user)
 
-    // 不返回 passwordHash
-    const { passwordHash: _, ...result } = saved
-    return result
+    return this.toUserResponseDto(saved)
   }
 
   /**
    * 更新用户信息
    */
-  async updateUser(id: string, dto: UpdateUserDto): Promise<Omit<User, 'passwordHash'>> {
+  async updateUser(id: string, dto: UpdateUserDto): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({ where: { id } })
     if (!user) {
       throw new NotFoundException(`用户 ${id} 不存在`)
@@ -177,7 +194,7 @@ export class UserService {
     }
 
     if (dto.password) {
-      user.passwordHash = await bcrypt.hash(dto.password, 10)
+      user.passwordHash = await PasswordUtil.hash(dto.password)
     }
     if (dto.email !== undefined) user.email = dto.email
     if (dto.nickname !== undefined) user.nickname = dto.nickname
@@ -186,8 +203,7 @@ export class UserService {
     if (dto.isActive !== undefined) user.isActive = dto.isActive
 
     const saved = await this.userRepository.save(user)
-    const { passwordHash: _, ...result } = saved
-    return result
+    return this.toUserResponseDto(saved)
   }
 
   /**

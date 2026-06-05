@@ -7,7 +7,20 @@ import { JwtService } from '@nestjs/jwt'
 import { UserService } from '../user/user.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
-import * as bcrypt from 'bcryptjs'
+import { getRequiredEnv } from '../../common/config/env'
+import { PasswordUtil } from '../../common/utils/password.util'
+import {
+  AuthUserInfoDto,
+  CaptchaResponseDto,
+  EncryptKeyResponseDto,
+  LoginResponseDto,
+  LogoutResponseDto,
+  RefreshTokenResponseDto,
+  RegisterResponseDto
+} from './dto/auth-response.dto'
+
+const REFRESH_TOKEN_CACHE_PREFIX = 'auth:refresh-token:'
+const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60 * 1000
 
 @Injectable()
 export class AuthService {
@@ -20,18 +33,18 @@ export class AuthService {
   /**
    * 生成双 Token (Access & Refresh)
    */
-  private generateTokens(userId: string, username: string) {
+  private generateTokens(userId: string, username: string): RefreshTokenResponseDto {
     const payload = { sub: userId, username }
 
     // Access Token: 短效 (如 2 小时)
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_ACCESS_SECRET || 'fallback-access-secret',
+      secret: getRequiredEnv('JWT_ACCESS_SECRET'),
       expiresIn: '2h'
     })
 
     // Refresh Token: 长效 (如 7 天)
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+      secret: getRequiredEnv('JWT_REFRESH_SECRET'),
       expiresIn: '7d'
     })
 
@@ -41,13 +54,132 @@ export class AuthService {
     }
   }
 
+  private buildRefreshTokenCacheKey(userId: string): string {
+    return `${REFRESH_TOKEN_CACHE_PREFIX}${userId}`
+  }
+
+  private hashRefreshToken(refreshToken: string): string {
+    return crypto.createHash('sha256').update(refreshToken).digest('hex')
+  }
+
+  private async storeRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    await this.cacheManager.set(
+      this.buildRefreshTokenCacheKey(userId),
+      this.hashRefreshToken(refreshToken),
+      REFRESH_TOKEN_TTL
+    )
+  }
+
+  private async verifyStoredRefreshToken(userId: string, refreshToken: string): Promise<void> {
+    const storedRefreshTokenHash = await this.cacheManager.get<string>(
+      this.buildRefreshTokenCacheKey(userId)
+    )
+
+    if (!storedRefreshTokenHash) {
+      throw new UnauthorizedException('Refresh Token 已失效，请重新登录')
+    }
+
+    if (storedRefreshTokenHash !== this.hashRefreshToken(refreshToken)) {
+      throw new UnauthorizedException('Refresh Token 无效，请重新登录')
+    }
+  }
+
+  async revokeRefreshToken(userId: string): Promise<void> {
+    await this.cacheManager.del(this.buildRefreshTokenCacheKey(userId))
+  }
+
+  private toLogoutResponseDto(): LogoutResponseDto {
+    return {
+      success: true
+    }
+  }
+
+  private toCaptchaResponseDto(captchaId: string, code: string): CaptchaResponseDto {
+    return {
+      captchaId,
+      code
+    }
+  }
+
+  private toEncryptKeyResponseDto(keyId: string, aesKey: string): EncryptKeyResponseDto {
+    return {
+      keyId,
+      aesKey
+    }
+  }
+
+  private toRegisterResponseDto(user: {
+    id: string
+    username: string
+    email: string
+  }): RegisterResponseDto {
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email
+      }
+    }
+  }
+
+  async logout(userId: string): Promise<LogoutResponseDto> {
+    await this.revokeRefreshToken(userId)
+
+    return this.toLogoutResponseDto()
+  }
+
+  private async issueTokens(userId: string, username: string): Promise<RefreshTokenResponseDto> {
+    const tokens = this.generateTokens(userId, username)
+    await this.storeRefreshToken(userId, tokens.refreshToken)
+    return tokens
+  }
+
+  private buildUserInfo(user: {
+    id: string
+    username: string
+    email: string
+    nickname: string | null
+    avatarUrl: string | null
+    getDisplayRole(): string
+    getPermissionCodes(): string[]
+  }): AuthUserInfoDto {
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      avatarUrl: user.avatarUrl,
+      role: user.getDisplayRole(),
+      permissions: user.getPermissionCodes()
+    }
+  }
+
+  private toLoginResponseDto(
+    tokens: RefreshTokenResponseDto,
+    user: {
+      id: string
+      username: string
+      email: string
+      nickname: string | null
+      avatarUrl: string | null
+      getDisplayRole(): string
+      getPermissionCodes(): string[]
+    }
+  ): LoginResponseDto {
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      userInfo: this.buildUserInfo(user)
+    }
+  }
+
   /**
    * 刷新 Token
    */
-  async refreshToken(refreshToken: string) {
+  async refreshToken(refreshToken: string): Promise<RefreshTokenResponseDto> {
     try {
       const payload = this.jwtService.verify<{ sub: string; username: string }>(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret'
+        secret: getRequiredEnv('JWT_REFRESH_SECRET')
       })
 
       // 验证用户是否仍然存在/有效
@@ -55,7 +187,10 @@ export class AuthService {
       if (!user || !user.isActive) {
         throw new UnauthorizedException('用户已失效，请重新登录')
       }
-      return this.generateTokens(user.id, user.username)
+
+      await this.verifyStoredRefreshToken(user.id, refreshToken)
+
+      return this.issueTokens(user.id, user.username)
     } catch (e) {
       // 如果 Refresh Token 也过期了，或者签名不对，则抛出 401 强制重新登录
       const errorMessage = e instanceof Error ? e.message : 'Invalid Token'
@@ -66,7 +201,7 @@ export class AuthService {
   /**
    * 生成简易数字验证码
    */
-  async generateCaptcha() {
+  async generateCaptcha(): Promise<CaptchaResponseDto> {
     // 生成唯一标识
     const captchaId = randomUUID()
     // 生成 6 位随机数字
@@ -75,10 +210,7 @@ export class AuthService {
     // 将验证码存入内存缓存中，有效期在 AppModule 中配置为 5 分钟
     await this.cacheManager.set(`captcha:${captchaId}`, code)
 
-    return {
-      captchaId,
-      code
-    }
+    return this.toCaptchaResponseDto(captchaId, code)
   }
 
   /**
@@ -102,17 +234,14 @@ export class AuthService {
   /**
    * 生成动态 AES 密钥
    */
-  async generateEncryptKey() {
+  async generateEncryptKey(): Promise<EncryptKeyResponseDto> {
     const keyId = randomUUID()
     const aesKey = crypto.randomBytes(16).toString('hex')
 
     // 缓存 5 分钟
     await this.cacheManager.set(`aesKey:${keyId}`, aesKey)
 
-    return {
-      keyId,
-      aesKey
-    }
+    return this.toEncryptKeyResponseDto(keyId, aesKey)
   }
 
   /**
@@ -131,7 +260,7 @@ export class AuthService {
     return aesKey
   }
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto): Promise<RegisterResponseDto> {
     const { username, email, password, otp, captchaId } = registerDto
 
     // 校验验证码
@@ -147,24 +276,17 @@ export class AuthService {
       }
     }
 
-    const salt = await bcrypt.genSalt(10)
-    const passwordHash = await bcrypt.hash(password, salt)
+    const passwordHash = await PasswordUtil.hash(password)
     const newUser = await this.userService.create({
       username,
       email,
       passwordHash
     })
 
-    return {
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email
-      }
-    }
+    return this.toRegisterResponseDto(newUser)
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto): Promise<LoginResponseDto> {
     const { username, password, otp, captchaId } = loginDto
 
     // 校验验证码
@@ -179,34 +301,16 @@ export class AuthService {
       throw new UnauthorizedException('账号不可用，请联系管理员')
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+    const isPasswordValid = await PasswordUtil.compare(password, user.passwordHash)
 
-    if (!isPasswordValid && user.passwordHash !== password) {
+    if (!isPasswordValid) {
       throw new UnauthorizedException('用户名或密码错误')
     }
 
     await this.userService.updateLastLogin(user.id)
 
-    // 生成双 Token
-    const tokens = this.generateTokens(user.id, user.username)
+    const tokens = await this.issueTokens(user.id, user.username)
 
-    // 提取用户的所有不重复的权限标识
-    const permissions = Array.from(
-      new Set(user.roles?.flatMap(r => r.permissions?.map(p => p.code) || []) || [])
-    )
-
-    return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      userInfo: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        nickname: user.nickname,
-        avatarUrl: user.avatarUrl,
-        role: user.role,
-        permissions
-      }
-    }
+    return this.toLoginResponseDto(tokens, user)
   }
 }

@@ -3,8 +3,12 @@ import { ValidationPipe } from '@nestjs/common'
 import { AppModule } from './app.module'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
+import { getRequiredEnv } from './common/config/env'
 
 async function bootstrap() {
+  getRequiredEnv('JWT_ACCESS_SECRET')
+  getRequiredEnv('JWT_REFRESH_SECRET')
+
   const app = await NestFactory.create(AppModule)
 
   // 设置全局路由前缀（最佳实践）

@@ -15,6 +15,9 @@ import { UserService } from './user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
+import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
+import { success } from '../../common/response/api-response'
+import type { ApiSuccessBody } from '../../common/response/api-response'
 import { RequirePermissions } from '../../common/decorators/permissions.decorator'
 import { PermissionsGuard } from '../../common/guards/permissions.guard'
 
@@ -29,12 +32,9 @@ export class UserController {
    */
   @Get('list')
   @RequirePermissions('system:user:list')
-  async list(@Query() query: QueryUserDto) {
+  async list(@Query() query: QueryUserDto): Promise<ApiSuccessBody<UserListResponseDto>> {
     const result = await this.userService.findAll(query)
-    return {
-      message: '查询成功',
-      data: result
-    }
+    return success(result, '查询成功')
   }
 
   /**
@@ -43,12 +43,9 @@ export class UserController {
    */
   @Get('detail/:id')
   @RequirePermissions('system:user:detail')
-  async detail(@Param('id', ParseUUIDPipe) id: string) {
+  async detail(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.findOne(id)
-    return {
-      message: '查询成功',
-      data: user
-    }
+    return success(user, '查询成功')
   }
 
   /**
@@ -57,12 +54,9 @@ export class UserController {
    */
   @Post('add')
   @RequirePermissions('system:user:create')
-  async add(@Body() dto: CreateUserDto) {
+  async add(@Body() dto: CreateUserDto): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.createUser(dto)
-    return {
-      message: '用户创建成功',
-      data: user
-    }
+    return success(user, '用户创建成功')
   }
 
   /**
@@ -71,12 +65,12 @@ export class UserController {
    */
   @Patch('update/:id')
   @RequirePermissions('system:user:update')
-  async update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserDto
+  ): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.updateUser(id, dto)
-    return {
-      message: '用户更新成功',
-      data: user
-    }
+    return success(user, '用户更新成功')
   }
 
   /**
@@ -85,12 +79,9 @@ export class UserController {
    */
   @Delete('delete/:id')
   @RequirePermissions('system:user:delete')
-  async delete(@Param('id', ParseUUIDPipe) id: string) {
+  async delete(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<null>> {
     await this.userService.removeUser(id)
-    return {
-      message: '用户删除成功',
-      data: null
-    }
+    return success(null, '用户删除成功')
   }
 
   /**
@@ -99,11 +90,8 @@ export class UserController {
    */
   @Delete('batchDelete')
   @RequirePermissions('system:user:delete')
-  async batchDelete(@Body('ids') ids: string[]) {
+  async batchDelete(@Body('ids') ids: string[]): Promise<ApiSuccessBody<{ deleted: number }>> {
     const result = await this.userService.batchRemoveUsers(ids)
-    return {
-      message: `成功删除 ${result.deleted} 个用户`,
-      data: result
-    }
+    return success(result, `成功删除 ${result.deleted} 个用户`)
   }
 }

@@ -5,13 +5,14 @@ import { AuthService } from './auth.service'
 import { AuthController } from './auth.controller'
 import { UserModule } from '../user/user.module'
 import { JwtStrategy } from './strategies/jwt.strategy'
+import { getRequiredEnv } from '../../common/config/env'
 
 @Module({
   imports: [
     UserModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_ACCESS_SECRET || 'fallback-access-secret',
+      secret: getRequiredEnv('JWT_ACCESS_SECRET'),
       signOptions: { expiresIn: '2h' } // Access Token 默认 2 小时过期
     })
   ],

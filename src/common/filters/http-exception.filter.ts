@@ -1,5 +1,6 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common'
 import { Response } from 'express'
+import { ApiErrorResponseEnvelope } from '../response/api-response'
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -20,7 +21,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if ('message' in responseObj) {
           const msg = responseObj.message
           if (Array.isArray(msg) && msg.length > 0) {
-            // 兼容 class-validator 抛出的数组错误
             message = String(msg[0])
           } else if (typeof msg === 'string') {
             message = msg
@@ -36,10 +36,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     }
 
     // 统一格式化错误响应
-    response.status(status).json({
+    const result: ApiErrorResponseEnvelope = {
       code: status,
       message,
       data: null
-    })
+    }
+
+    response.status(status).json(result)
   }
 }

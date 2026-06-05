@@ -30,7 +30,7 @@ export class User {
   avatarUrl!: string | null
 
   @Column({ type: 'varchar', length: 20, default: 'user' })
-  role!: string // 兼容保留的旧版单角色标识，用于简单 RBAC
+  role!: string // 兼容字段：用于前端展示/简单筛选，非真实权限来源
 
   @ManyToMany(() => Role, role => role.users, {
     cascade: true
@@ -40,7 +40,7 @@ export class User {
     joinColumn: { name: 'userId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'roleId', referencedColumnName: 'id' }
   })
-  roles!: Role[] // 新版多角色映射，用于细粒度权限控制
+  roles!: Role[] // 真实权限来源：用户角色关系及其下挂权限均以此字段为准
 
   @Column({ type: 'boolean', default: true })
   isActive!: boolean
@@ -53,4 +53,14 @@ export class User {
 
   @Column({ type: 'datetime', nullable: true })
   lastLoginAt!: Date | null
+
+  getDisplayRole(): string {
+    return this.role
+  }
+
+  getPermissionCodes(): string[] {
+    return Array.from(
+      new Set(this.roles?.flatMap(role => role.permissions?.map(item => item.code) || []) || [])
+    )
+  }
 }

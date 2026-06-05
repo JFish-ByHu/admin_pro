@@ -5,12 +5,25 @@ import {
   HttpCode,
   HttpStatus,
   Get,
-  UnauthorizedException,
-  UseInterceptors
+  UseInterceptors,
+  UseGuards,
+  Req
 } from '@nestjs/common'
+import { AuthGuard } from '@nestjs/passport'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { RefreshTokenDto } from './dto/refresh-token.dto'
+import { success } from '../../common/response/api-response'
+import type { ApiSuccessBody } from '../../common/response/api-response'
+import {
+  CaptchaResponseDto,
+  EncryptKeyResponseDto,
+  LoginResponseDto,
+  LogoutResponseDto,
+  RefreshTokenResponseDto,
+  RegisterResponseDto
+} from './dto/auth-response.dto'
 import { PasswordDecryptInterceptor } from '../../common/interceptors/password-decrypt.interceptor'
 
 @Controller('auth')
@@ -18,34 +31,42 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('captcha')
-  async getCaptcha() {
-    return this.authService.generateCaptcha()
+  async getCaptcha(): Promise<ApiSuccessBody<CaptchaResponseDto>> {
+    return success(await this.authService.generateCaptcha())
   }
 
   @Get('encryptKey')
-  async getEncryptKey() {
-    return this.authService.generateEncryptKey()
+  async getEncryptKey(): Promise<ApiSuccessBody<EncryptKeyResponseDto>> {
+    return success(await this.authService.generateEncryptKey())
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refreshToken(@Body('refreshToken') refreshToken: string) {
-    if (!refreshToken) {
-      throw new UnauthorizedException('缺少 Refresh Token')
-    }
-    return this.authService.refreshToken(refreshToken)
+  async refreshToken(
+    @Body() dto: RefreshTokenDto
+  ): Promise<ApiSuccessBody<RefreshTokenResponseDto>> {
+    return success(await this.authService.refreshToken(dto.refreshToken))
   }
 
   @Post('register')
   @UseInterceptors(PasswordDecryptInterceptor)
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto)
+  async register(@Body() registerDto: RegisterDto): Promise<ApiSuccessBody<RegisterResponseDto>> {
+    return success(await this.authService.register(registerDto))
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(PasswordDecryptInterceptor)
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto)
+  async login(@Body() loginDto: LoginDto): Promise<ApiSuccessBody<LoginResponseDto>> {
+    return success(await this.authService.login(loginDto))
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('jwt'))
+  async logout(
+    @Req() request: { user: { id: string } }
+  ): Promise<ApiSuccessBody<LogoutResponseDto>> {
+    return success(await this.authService.logout(request.user.id))
   }
 }

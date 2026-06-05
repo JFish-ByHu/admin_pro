@@ -3,6 +3,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt'
 import { PassportStrategy } from '@nestjs/passport'
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { UserService } from '../../user/user.service'
+import { getRequiredEnv } from '../../../common/config/env'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -13,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       // 必须忽略过期验证，交由 Passport 自己处理
       ignoreExpiration: false,
       // 使用和签发相同的 Access Secret
-      secretOrKey: process.env.JWT_ACCESS_SECRET || 'fallback-access-secret'
+      secretOrKey: getRequiredEnv('JWT_ACCESS_SECRET')
     })
   }
 
@@ -27,10 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('账号不可用，请联系管理员')
     }
 
-    // 提取并挂载权限标识数组
-    const permissions = Array.from(
-      new Set(user.roles?.flatMap(r => r.permissions?.map(p => p.code) || []) || [])
-    )
+    const permissions = user.getPermissionCodes()
 
     // 将 user 挂载到 request.user 上
     return { ...user, permissions }
