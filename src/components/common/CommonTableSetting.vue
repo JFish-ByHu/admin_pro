@@ -129,7 +129,7 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
         </section>
 
         <div class="common-table-setting__footer">
-          <el-button plain color="var(--t-info)" @click="resetSettings">恢复默认配置</el-button>
+          <el-button color="var(--c-info)" @click="resetSettings">恢复默认配置</el-button>
         </div>
       </div>
     </el-drawer>

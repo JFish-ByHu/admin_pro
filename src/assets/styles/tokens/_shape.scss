@@ -1,0 +1,29 @@
+// ==========================================
+// 形状 Token（圆角 + 阴影）
+// ==========================================
+
+:root {
+  // --- 全局圆角规范 ---
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  // --- 阴影 (Modern Diffused) ---
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+
+  // --- 标签活跃阴影 ---
+  --tags-item-active-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+html.dark {
+  // --- 阴影 (Dark Mode Diffused) ---
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-base: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+
+  // --- 标签活跃阴影 ---
+  --tags-item-active-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}

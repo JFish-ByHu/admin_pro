@@ -1,0 +1,9 @@
+// ==========================================
+// 排版 Token
+// ==========================================
+
+:root {
+  --font-size-base: clamp(13px, 0.9vw, 15px);
+  --font-size-lg: clamp(16px, 1.2vw, 20px);
+  --font-size-xl: clamp(20px, 1.8vw, 32px);
+}

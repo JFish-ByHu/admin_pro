@@ -68,7 +68,6 @@ declare module 'vue' {
     IEpRefresh: typeof import('~icons/ep/refresh')['default']
     IEpSearch: typeof import('~icons/ep/search')['default']
     IEpSetting: typeof import('~icons/ep/setting')['default']
-    IEpSort: typeof import('~icons/ep/sort')['default']
     IEpSunny: typeof import('~icons/ep/sunny')['default']
     IEpSwitchButton: typeof import('~icons/ep/switch-button')['default']
     IEpUser: typeof import('~icons/ep/user')['default']

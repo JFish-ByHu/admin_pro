@@ -51,7 +51,7 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@use "@/assets/styles/global-style.scss" as *;\n@use "@/assets/styles/breakpoints.scss" as *;\n`
+        additionalData: `@use "@/assets/styles/tokens/spacing";\n@use "@/assets/styles/tokens/color";\n@use "@/assets/styles/tokens/shape";\n@use "@/assets/styles/tokens/typography";\n@use "@/assets/styles/breakpoints.scss" as *;\n`
       }
     }
   }
