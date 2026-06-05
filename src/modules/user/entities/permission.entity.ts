@@ -4,14 +4,14 @@ import { Role } from '../entities/role.entity'
 @Entity('permissions')
 export class Permission {
   @PrimaryGeneratedColumn('uuid')
-  id: string
+  id!: string
 
   @Column({ type: 'varchar', length: 100, unique: true })
-  code: string // 例如 'system:user:delete'
+  code!: string // 例如 'system:user:delete'
 
   @Column({ type: 'varchar', length: 100 })
-  name: string // 例如 '删除用户'
+  name!: string // 例如 '删除用户'
 
   @ManyToMany(() => Role, role => role.permissions)
-  roles: Role[]
+  roles!: Role[]
 }
