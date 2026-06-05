@@ -18,7 +18,7 @@ export const getCaptcha = (): Promise<CaptchaResult> => {
 }
 
 /**
- * 获取动态加密密钥
+ * 获取动态加密的密钥
  */
 export const getEncryptKey = (): Promise<EncryptKeyResult> => {
   return request({
