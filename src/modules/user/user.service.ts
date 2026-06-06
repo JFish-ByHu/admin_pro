@@ -73,9 +73,10 @@ export class UserService {
   /**
    * 分页查询用户列表
    * 支持关键词（用户名/昵称/邮箱）、角色、状态筛选
+   * 当 all=true 时忽略分页参数，返回全部匹配结果
    */
   async findAll(query: QueryUserDto): Promise<UserListResponseDto> {
-    const { keyword, role, status, page = 1, pageSize = 20 } = query
+    const { keyword, role, status, all = false, page = 1, pageSize = 20 } = query
 
     const qb = this.userRepository
       .createQueryBuilder('user')
@@ -107,17 +108,21 @@ export class UserService {
     }
 
     const total = await qb.getCount()
-    const list = await qb
-      .orderBy('user.createTime', 'DESC')
-      .skip((page - 1) * pageSize)
-      .take(pageSize)
-      .getMany()
+
+    qb.orderBy('user.createTime', 'DESC')
+
+    const list = all
+      ? await qb.getMany()
+      : await qb
+          .skip((page - 1) * pageSize)
+          .take(pageSize)
+          .getMany()
 
     return {
       list: list.map(user => this.toUserResponseDto(user)),
       total,
-      page,
-      pageSize
+      page: all ? 1 : page,
+      pageSize: all ? list.length : pageSize
     }
   }
 
