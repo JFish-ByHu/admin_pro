@@ -8,6 +8,11 @@ import type { UserInfo } from '@/types/user'
 
 const props = defineProps<{
   row: UserInfo
+  canEdit: boolean
+  canToggleStatus: boolean
+  canDelete: boolean
+  toggleStatusDisabledReason?: string
+  deleteDisabledReason?: string
 }>()
 
 const emit = defineEmits<{
@@ -28,23 +33,30 @@ const actions = computed<CommonTableActionItem[]>(() => {
   return [
     {
       key: 'edit',
-      tooltip: 'edit user',
+      tooltip: props.canEdit ? '编辑用户' : '无编辑权限',
       icon: Edit,
       color: 'var(--c-info)',
+      disabled: !props.canEdit,
       onClick: () => emit('edit', props.row)
     },
     {
       key: 'toggle-status',
-      tooltip: props.row.status === 'enabled' ? 'disable user' : 'enable user',
+      tooltip: props.canToggleStatus
+        ? props.row.status === 'enabled'
+          ? '禁用用户'
+          : '启用用户'
+        : props.toggleStatusDisabledReason || '无状态变更权限',
       icon: statusButtonIcon.value,
       type: statusButtonType.value,
+      disabled: !props.canToggleStatus,
       onClick: () => emit('toggle-status', props.row)
     },
     {
       key: 'delete',
-      tooltip: 'delete user',
+      tooltip: props.canDelete ? '删除用户' : props.deleteDisabledReason || '无删除权限',
       icon: Delete,
       type: 'danger',
+      disabled: !props.canDelete,
       onClick: () => emit('delete', props.row)
     }
   ]

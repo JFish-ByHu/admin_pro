@@ -4,6 +4,7 @@ import { computed, useSlots, type Component } from 'vue'
 export interface CommonTableToolbarAction {
   key: string
   label: string
+  permission?: string | string[]
   icon?: Component
   type?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
   size?: 'large' | 'default' | 'small'
@@ -75,6 +76,7 @@ const triggerAction = (action: CommonTableToolbarAction) => {
       <el-button
         v-for="action in actions"
         :key="action.key"
+        v-permission="action.permission"
         :icon="action.icon"
         :type="action.type"
         :size="action.size"

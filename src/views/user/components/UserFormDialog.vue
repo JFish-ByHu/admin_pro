@@ -14,6 +14,7 @@ const props = defineProps<{
   mode: 'add' | 'edit'
   title: string
   submitting: boolean
+  submitPermission?: string | string[]
   initialValue: UserFormModel
   roleOptions: Option<UserRole>[]
   statusOptions: Option<UserStatus>[]
@@ -251,6 +252,8 @@ watch(
               fit="cover"
               class="avatar-uploader__preview"
               preview-teleported
+              @click.stop
+              @mousedown.stop
             />
             <div v-else class="avatar-uploader__placeholder">
               <el-icon><i-ep-plus /></el-icon>
@@ -277,7 +280,12 @@ watch(
 
     <template #footer>
       <el-button @click="closeDialog">取消</el-button>
-      <el-button type="primary" :loading="submitting" @click="submitDialog">
+      <el-button
+        v-permission="submitPermission"
+        type="primary"
+        :loading="submitting"
+        @click="submitDialog"
+      >
         {{ mode === 'add' ? '创建用户' : '保存修改' }}
       </el-button>
     </template>

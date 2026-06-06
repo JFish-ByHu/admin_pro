@@ -1,31 +1,20 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, onMounted } from 'vue'
+import { computed, h, ref, onMounted } from 'vue'
 import { CirclePlus, Delete } from '@element-plus/icons-vue'
-import CommonTableFilter, { type TableFilterField } from '@/components/common/CommonTableFilter.vue'
+import CommonTableFilter from '@/components/common/CommonTableFilter.vue'
 import CommonTable, {
   type CommonTableColumn,
-  type CommonTableRowReorderPayload,
-  type TablePagination
+  type CommonTableRowReorderPayload
 } from '@/components/common/CommonTable.vue'
 import CommonTableToolbar, {
   type CommonTableToolbarAction
 } from '@/components/common/CommonTableToolbar.vue'
-import {
-  addUser,
-  batchDeleteUsers,
-  deleteUserById,
-  getUserList,
-  updateUser as updateUserApi
-} from '@/api/user'
-import type {
-  UserCreateParams,
-  UserFormModel,
-  UserInfo,
-  UserQuery,
-  UserStatus,
-  UserView
-} from '@/types/user'
+import { addUser, batchDeleteUsers, deleteUserById, updateUser as updateUserApi } from '@/api/user'
+import type { UserCreateParams, UserFormModel, UserInfo, UserStatus, UserView } from '@/types/user'
+import { USER_PERMISSION_CODES } from '@/constants/permission'
 import { Message } from '@/utils/message'
+import { useUserPermissions } from './composables/useUserPermissions'
+import { useUserListQuery } from './composables/useUserListQuery'
 import {
   UserActionCell,
   UserFormDialog,
@@ -53,35 +42,51 @@ const statusOptions: { label: string; value: UserStatus }[] = [
   { label: '禁用', value: 'disabled' }
 ]
 
-// 筛选条件
-const query = ref<UserQuery>({
-  keyword: '',
-  role: '',
-  status: ''
-})
-
-// 筛选字段配置
-const filterFields: TableFilterField[] = [
-  { prop: 'keyword', label: '关键词', type: 'input', placeholder: '用户名 / 昵称 / 邮箱' },
-  { prop: 'role', label: '角色', type: 'select', options: roleOptions },
-  { prop: 'status', label: '状态', type: 'select', options: statusOptions }
-]
-
-// 加载状态
-const loading = ref(false)
 const selectedRowKeys = ref<Array<string | number>>([])
 const isTableRowSortable = ref(false)
-const tableData = ref<UserInfo[]>([])
 const dialogVisible = ref(false)
 const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingUserId = ref('')
 
-// 分页
-const pagination = reactive<TablePagination>({
-  page: 1,
-  pageSize: 20,
-  total: 0
+const {
+  canCreateUser,
+  canUpdateUser,
+  canDeleteUser,
+  isSelfSelectedForBatchDelete,
+  isSelfTargetUser
+} = useUserPermissions(selectedRowKeys)
+
+const normalizeUser = (user: UserView): UserInfo => {
+  return {
+    id: user.id,
+    username: user.username,
+    nickname: user.nickname || user.username,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+    status: user.isActive ? 'enabled' : 'disabled',
+    createTime: user.createTime,
+    updateTime: user.updateTime,
+    lastLoginAt: user.lastLoginAt
+  }
+}
+
+const {
+  loading,
+  tableData,
+  query,
+  filterFields,
+  pagination,
+  fetchUsers,
+  searchUsers,
+  resetFilters,
+  refreshPageData
+} = useUserListQuery({
+  roleOptions,
+  statusOptions,
+  selectedRowKeys,
+  normalizeUser
 })
 
 const createInitialFormModel = (): UserFormModel => ({
@@ -100,70 +105,22 @@ const dialogTitle = computed(() => {
   return dialogMode.value === 'add' ? '新增用户' : '编辑用户'
 })
 
-const normalizeUser = (user: UserView): UserInfo => {
-  return {
-    id: user.id,
-    username: user.username,
-    nickname: user.nickname || user.username,
-    email: user.email,
-    avatarUrl: user.avatarUrl,
-    role: user.role,
-    status: user.isActive ? 'enabled' : 'disabled',
-    createTime: user.createTime,
-    updateTime: user.updateTime,
-    lastLoginAt: user.lastLoginAt
+const openAddUserDialog = () => {
+  if (!canCreateUser.value) {
+    return
   }
-}
 
-const fetchUsers = async () => {
-  loading.value = true
-
-  try {
-    const result = await getUserList({
-      keyword: query.value.keyword || undefined,
-      role: query.value.role || undefined,
-      status: query.value.status || undefined,
-      page: pagination.page,
-      pageSize: pagination.pageSize
-    })
-
-    tableData.value = result.list.map(normalizeUser)
-    selectedRowKeys.value = selectedRowKeys.value.filter(key =>
-      tableData.value.some(row => row.id === key)
-    )
-    pagination.total = result.total
-    pagination.page = result.page
-    pagination.pageSize = result.pageSize
-  } finally {
-    loading.value = false
-  }
-}
-
-// 查询
-const searchUsers = async () => {
-  pagination.page = 1
-  await fetchUsers()
-}
-
-// 重置
-const resetFilters = async () => {
-  pagination.page = 1
-  await fetchUsers()
-}
-
-// 翻页
-const refreshPageData = async () => {
-  await fetchUsers()
-}
-
-const openAddDialog = () => {
   dialogMode.value = 'add'
   editingUserId.value = ''
   formModel.value = createInitialFormModel()
   dialogVisible.value = true
 }
 
-const openEditDialog = (row: UserInfo) => {
+const openEditUserDialog = (row: UserInfo) => {
+  if (!canUpdateUser.value) {
+    return
+  }
+
   dialogMode.value = 'edit'
   editingUserId.value = row.id
   formModel.value = {
@@ -178,7 +135,7 @@ const openEditDialog = (row: UserInfo) => {
   dialogVisible.value = true
 }
 
-const closeDialog = () => {
+const closeUserDialog = () => {
   dialogVisible.value = false
   formModel.value = createInitialFormModel()
 }
@@ -195,7 +152,15 @@ const buildCreatePayload = (): UserCreateParams => {
   }
 }
 
-const submitDialog = async () => {
+const submitUserDialog = async () => {
+  if (dialogMode.value === 'add' && !canCreateUser.value) {
+    return
+  }
+
+  if (dialogMode.value === 'edit' && !canUpdateUser.value) {
+    return
+  }
+
   dialogSubmitting.value = true
 
   try {
@@ -214,7 +179,7 @@ const submitDialog = async () => {
       Message.success('用户更新成功')
     }
 
-    closeDialog()
+    closeUserDialog()
     selectedRowKeys.value = []
     await fetchUsers()
   } finally {
@@ -224,15 +189,23 @@ const submitDialog = async () => {
 
 const onDialogSubmit = async (payload: UserFormModel) => {
   formModel.value = payload
-  await submitDialog()
+  await submitUserDialog()
 }
 
 // 行操作
 const editUser = (row: UserInfo) => {
-  openEditDialog(row)
+  openEditUserDialog(row)
 }
 
 const toggleUserStatus = async (row: UserInfo) => {
+  if (isSelfTargetUser(row)) {
+    return
+  }
+
+  if (!canUpdateUser.value) {
+    return
+  }
+
   const nextStatus: UserStatus = row.status === 'enabled' ? 'disabled' : 'enabled'
 
   await updateUserApi(row.id, {
@@ -244,6 +217,14 @@ const toggleUserStatus = async (row: UserInfo) => {
 }
 
 const deleteUser = (row: UserInfo) => {
+  if (isSelfTargetUser(row)) {
+    return
+  }
+
+  if (!canDeleteUser.value) {
+    return
+  }
+
   ElMessageBox.confirm(`确认删除用户「${row.nickname}」吗？`, '删除确认', {
     type: 'warning',
     confirmButtonText: '确认删除',
@@ -263,12 +244,19 @@ const deleteUser = (row: UserInfo) => {
 }
 
 const createUser = () => {
-  openAddDialog()
+  openAddUserDialog()
 }
 
 const deleteSelectedUsers = () => {
+  if (isSelfSelectedForBatchDelete.value) {
+    return
+  }
+
+  if (!canDeleteUser.value) {
+    return
+  }
+
   if (!selectedRowKeys.value.length) {
-    Message.warning('请先选择要删除的用户')
     return
   }
 
@@ -294,7 +282,7 @@ const deleteSelectedUsers = () => {
 }
 
 const reorderCurrentPageUsers = (payload: CommonTableRowReorderPayload) => {
-  const reorderedRows = payload.currentPageData.map(row => toUserRow(row))
+  const reorderedRows = payload.currentPageData.map(row => row as unknown as UserInfo)
   const reorderedIdSet = new Set(reorderedRows.map(row => row.id))
   let nextIndex = 0
 
@@ -315,18 +303,24 @@ const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
     {
       key: 'create',
       label: '新增',
+      permission: USER_PERMISSION_CODES.CREATE,
       icon: CirclePlus,
       size: 'small',
       color: 'var(--c-info)',
+      disabled: !canCreateUser.value,
       onClick: createUser
     },
     {
       key: 'batch-delete',
       label: '批量删除',
+      permission: USER_PERMISSION_CODES.DELETE,
       icon: Delete,
       type: 'danger',
       size: 'small',
-      disabled: selectedRowKeys.value.length === 0,
+      disabled:
+        !canDeleteUser.value ||
+        selectedRowKeys.value.length === 0 ||
+        isSelfSelectedForBatchDelete.value,
       onClick: deleteSelectedUsers
     }
   ]
@@ -340,7 +334,7 @@ const toolbarSummaryText = computed(() => {
 })
 
 const toUserRow = (rowData: Record<string, unknown>) => rowData as unknown as UserInfo
-// 普通表格列配置
+
 const baseColumns: CommonTableColumn[] = [
   {
     key: 'index',
@@ -381,13 +375,22 @@ const baseColumns: CommonTableColumn[] = [
     width: 200,
     align: 'center',
     fixed: 'right',
-    cellRenderer: ({ rowData }) =>
-      h(UserActionCell, {
-        row: toUserRow(rowData),
+    cellRenderer: ({ rowData }) => {
+      const row = toUserRow(rowData)
+      const isSelfRow = isSelfTargetUser(row)
+
+      return h(UserActionCell, {
+        row,
+        canEdit: canUpdateUser.value,
+        canToggleStatus: canUpdateUser.value && !isSelfRow,
+        canDelete: canDeleteUser.value && !isSelfRow,
+        toggleStatusDisabledReason: isSelfRow ? '不能禁用当前登录用户' : '',
+        deleteDisabledReason: isSelfRow ? '不能删除当前登录用户' : '',
         onEdit: editUser,
         onToggleStatus: toggleUserStatus,
         onDelete: deleteUser
       })
+    }
   }
 ]
 
@@ -437,6 +440,9 @@ onMounted(() => {
       :mode="dialogMode"
       :title="dialogTitle"
       :submitting="dialogSubmitting"
+      :submit-permission="
+        dialogMode === 'add' ? USER_PERMISSION_CODES.CREATE : USER_PERMISSION_CODES.UPDATE
+      "
       :initial-value="formModel"
       :role-options="roleOptions"
       :status-options="statusOptions"
