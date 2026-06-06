@@ -72,7 +72,7 @@ const router = createRouter({
 })
 
 // 全局前置守卫：权限拦截与进度条
-router.beforeEach((to, from, next) => {
+router.beforeEach(to => {
   NProgress.start()
 
   const userStore = useUserStore()
@@ -84,17 +84,17 @@ router.beforeEach((to, from, next) => {
 
   if (hasToken) {
     if (to.path === '/auth') {
-      next({ path: '/' })
-    } else {
-      next()
+      return { path: '/' }
     }
+
+    return true
   } else {
     if (isWhiteList) {
-      next()
-    } else {
-      // 未登录访问受保护页面，先跳转 401 页面明确告知未授权，并携带原路径供后续登录跳转
-      next({ path: '/401', query: { redirect: to.fullPath } })
+      return true
     }
+
+    // 未登录访问受保护页面，先跳转 401 页面明确告知未授权，并携带原路径供后续登录跳转
+    return { path: '/401', query: { redirect: to.fullPath } }
   }
 })
 

@@ -4,6 +4,7 @@ import type {
   EncryptKeyResult,
   LoginParams,
   LoginResult,
+  RefreshTokenResult,
   RegisterParams
 } from '@/types/auth'
 
@@ -31,7 +32,7 @@ export const getEncryptKey = (): Promise<EncryptKeyResult> => {
  * 刷新 Token
  * @returns 刷新后的 Token
  */
-export const refreshTokens = (refreshToken: string) => {
+export const refreshTokens = (refreshToken: string): Promise<RefreshTokenResult> => {
   return request({
     url: '/auth/refresh',
     method: 'post',

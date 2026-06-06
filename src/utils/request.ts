@@ -106,7 +106,7 @@ service.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       const errorData = error.response.data as { code?: number; message?: string; data?: null }
-      const errorMessage = errorData?.message || error.message || '网络请求错误'
+      const errorMessage = errorData?.message || error.message || 'Network request error'
 
       switch (status) {
         case 400:
@@ -134,7 +134,7 @@ service.interceptors.response.use(
           const userStore = useUserStore()
           if (!userStore.refreshToken) {
             // 连 refreshToken 都没有，直接去登录
-            Message.warning('登录已失效，请重新登录')
+            Message.warning('Login has expired, please log in again')
             userStore.logout()
             router.replace({
               path: '/auth',
@@ -148,7 +148,7 @@ service.interceptors.response.use(
             return refreshTokens(userStore.refreshToken)
               .then(res => {
                 // 刷新成功，更新本地 Token
-                const { accessToken, refreshToken } = res.data
+                const { accessToken, refreshToken } = res
                 userStore.setTokens(accessToken, refreshToken)
 
                 // 遍历队列中所有被挂起的请求，用新的 token 重新发起
@@ -161,7 +161,7 @@ service.interceptors.response.use(
                 }
               })
               .catch(refreshError => {
-                Message.error('登录状态过期，请重新登录')
+                Message.error('Login status expired, please log in again')
                 userStore.logout()
                 requestsQueue = []
                 router.replace({
@@ -184,26 +184,26 @@ service.interceptors.response.use(
             })
           }
         case 403:
-          Message.error('权限不足，拒绝访问')
+          Message.error('Forbidden: You do not have permission to access this resource')
           router.replace('/403')
           break
         case 404:
-          Message.error(`请求接口不存在: ${error.config?.url}`)
+          Message.error(`Not Found: ${error.config?.url}`)
           break
         case 500:
         case 502:
         case 503:
         case 504:
-          Message.error('服务器内部错误，请稍后再试')
+          Message.error('Network error')
           break
         default:
-          Message.error(`未知错误: ${status}`)
+          Message.error(`Unknown error: ${status}`)
       }
     } else {
       if (error.message.includes('timeout')) {
-        Message.error('网络请求超时，请检查网络连接')
+        Message.error('Network request timeout, please check your connection')
       } else if (error.message.includes('Network Error')) {
-        Message.error('网络连接断开，请检查网络')
+        Message.error('Network disconnected, please check your connection')
       } else {
         Message.error(error.message)
       }

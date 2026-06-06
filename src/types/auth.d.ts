@@ -58,3 +58,8 @@ export interface LoginResult {
   refreshToken: string
   userInfo: UserInfo
 }
+
+export interface RefreshTokenResult {
+  accessToken: string
+  refreshToken: string
+}

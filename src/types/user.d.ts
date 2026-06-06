@@ -1,27 +1,76 @@
-/**
- * 用户状态枚举
- */
+export type UserRole = 'super' | 'admin' | 'operator' | 'user'
+
 export type UserStatus = 'enabled' | 'disabled'
 
-/**
- * 用户信息
- */
+export interface UserView {
+  id: string
+  username: string
+  email: string
+  nickname: string | null
+  avatarUrl: string | null
+  role: UserRole | string
+  isActive: boolean
+  createTime: string
+  updateTime: string
+  lastLoginAt: string | null
+}
+
 export interface UserInfo {
   id: string
   username: string
   nickname: string
   email: string
-  phone: string
-  role: string
+  avatarUrl: string | null
+  role: UserRole | string
   status: UserStatus
   createTime: string
+  updateTime: string
+  lastLoginAt: string | null
 }
 
-/**
- * 用户列表查询参数
- */
-export interface UserQuery {
+export interface UserListParams {
   keyword?: string
-  role?: string
+  role?: string | ''
   status?: UserStatus | ''
+  all?: boolean
+  page?: number
+  pageSize?: number
+}
+
+export type UserQuery = UserListParams
+
+export interface UserListResult {
+  list: UserView[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface UserCreateParams {
+  username: string
+  email: string
+  password: string
+  nickname?: string
+  avatarUrl?: string
+  role?: UserRole
+  isActive?: boolean
+}
+
+export interface UserUpdateParams {
+  email?: string
+  password?: string
+  nickname?: string
+  avatarUrl?: string
+  role?: UserRole
+  isActive?: boolean
+}
+
+export interface UserFormModel {
+  username: string
+  email: string
+  password: string
+  nickname: string
+  avatarUrl: string
+  role: UserRole
+  status: UserStatus
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref, watchEffect } from 'vue'
+import { computed, h, reactive, ref, onMounted } from 'vue'
 import { CirclePlus, Delete } from '@element-plus/icons-vue'
 import CommonTableFilter, { type TableFilterField } from '@/components/common/CommonTableFilter.vue'
 import CommonTable, {
@@ -10,12 +10,32 @@ import CommonTable, {
 import CommonTableToolbar, {
   type CommonTableToolbarAction
 } from '@/components/common/CommonTableToolbar.vue'
-import type { UserInfo, UserQuery, UserStatus } from '@/types/user'
+import {
+  addUser,
+  batchDeleteUsers,
+  deleteUserById,
+  getUserList,
+  updateUser as updateUserApi
+} from '@/api/user'
+import type {
+  UserCreateParams,
+  UserFormModel,
+  UserInfo,
+  UserQuery,
+  UserStatus,
+  UserView
+} from '@/types/user'
 import { Message } from '@/utils/message'
-import { UserActionCell, UserIdentityCell, UserRoleTag, UserStatusTag } from './CompsExport'
+import {
+  UserActionCell,
+  UserFormDialog,
+  UserIdentityCell,
+  UserRoleTag,
+  UserStatusTag
+} from './CompsExport'
 
 // 角色选项
-const roleOptions = [
+const roleOptions: { label: string; value: UserFormModel['role'] }[] = [
   { label: '超级管理员', value: 'super' },
   { label: '管理员', value: 'admin' },
   { label: '运营', value: 'operator' },
@@ -32,35 +52,6 @@ const statusOptions: { label: string; value: UserStatus }[] = [
   { label: '启用', value: 'enabled' },
   { label: '禁用', value: 'disabled' }
 ]
-
-// 生成 mock 用户数据
-const firstNames = ['赵', '钱', '孙', '李', '周', '吴', '郑', '王', '冯', '陈']
-const lastNames = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军']
-const generateMockUsers = (count: number): UserInfo[] => {
-  const list: UserInfo[] = []
-  for (let i = 1; i <= count; i++) {
-    const fn = firstNames[i % firstNames.length]
-    const ln = lastNames[i % lastNames.length]
-    const roleItem = roleOptions[i % roleOptions.length]
-    const role = roleItem ? roleItem.value : 'user'
-    const status: UserStatus = i % 5 === 0 ? 'disabled' : 'enabled'
-    const month = String((i % 12) + 1).padStart(2, '0')
-    const day = String((i % 28) + 1).padStart(2, '0')
-    list.push({
-      id: `U${String(i).padStart(4, '0')}`,
-      username: `user_${String(i).padStart(3, '0')}`,
-      nickname: `${fn}${ln}`,
-      email: `user${i}@example.com`,
-      phone: `13${String(100000000 + i).slice(0, 9)}`,
-      role,
-      status,
-      createTime: `2024-${month}-${day} 10:${String(i % 60).padStart(2, '0')}:00`
-    })
-  }
-  return list
-}
-
-const allUsers = ref<UserInfo[]>(generateMockUsers(86))
 
 // 筛选条件
 const query = ref<UserQuery>({
@@ -79,7 +70,12 @@ const filterFields: TableFilterField[] = [
 // 加载状态
 const loading = ref(false)
 const selectedRowKeys = ref<Array<string | number>>([])
-const isTableRowSortable = ref(true)
+const isTableRowSortable = ref(false)
+const tableData = ref<UserInfo[]>([])
+const dialogVisible = ref(false)
+const dialogSubmitting = ref(false)
+const dialogMode = ref<'add' | 'edit'>('add')
+const editingUserId = ref('')
 
 // 分页
 const pagination = reactive<TablePagination>({
@@ -88,71 +84,163 @@ const pagination = reactive<TablePagination>({
   total: 0
 })
 
-// 已应用的筛选条件（点击查询后生效）
-const appliedQuery = ref<UserQuery>({ ...query.value })
-
-// 按筛选条件过滤后的完整列表
-const filteredUsers = computed(() => {
-  const { keyword, role, status } = appliedQuery.value
-  return allUsers.value.filter(user => {
-    const matchKeyword =
-      !keyword ||
-      user.username.includes(keyword) ||
-      user.nickname.includes(keyword) ||
-      user.email.includes(keyword)
-    const matchRole = !role || user.role === role
-    const matchStatus = !status || user.status === status
-    return matchKeyword && matchRole && matchStatus
-  })
+const createInitialFormModel = (): UserFormModel => ({
+  username: '',
+  email: '',
+  password: '',
+  nickname: '',
+  avatarUrl: '',
+  role: 'user',
+  status: 'enabled'
 })
 
-// 同步总条数
-watchEffect(() => {
-  pagination.total = filteredUsers.value.length
+const formModel = ref<UserFormModel>(createInitialFormModel())
+
+const dialogTitle = computed(() => {
+  return dialogMode.value === 'add' ? '新增用户' : '编辑用户'
 })
 
-// 当前页数据
-const tableData = computed(() => {
-  const start = (pagination.page - 1) * pagination.pageSize
-  return filteredUsers.value.slice(start, start + pagination.pageSize)
-})
+const normalizeUser = (user: UserView): UserInfo => {
+  return {
+    id: user.id,
+    username: user.username,
+    nickname: user.nickname || user.username,
+    email: user.email,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
+    status: user.isActive ? 'enabled' : 'disabled',
+    createTime: user.createTime,
+    updateTime: user.updateTime,
+    lastLoginAt: user.lastLoginAt
+  }
+}
 
-// 模拟请求延迟
-const mockRequest = () => {
+const fetchUsers = async () => {
   loading.value = true
-  setTimeout(() => {
+
+  try {
+    const result = await getUserList({
+      keyword: query.value.keyword || undefined,
+      role: query.value.role || undefined,
+      status: query.value.status || undefined,
+      page: pagination.page,
+      pageSize: pagination.pageSize
+    })
+
+    tableData.value = result.list.map(normalizeUser)
+    selectedRowKeys.value = selectedRowKeys.value.filter(key =>
+      tableData.value.some(row => row.id === key)
+    )
+    pagination.total = result.total
+    pagination.page = result.page
+    pagination.pageSize = result.pageSize
+  } finally {
     loading.value = false
-  }, 400)
+  }
 }
 
 // 查询
-const searchUsers = () => {
+const searchUsers = async () => {
   pagination.page = 1
-  appliedQuery.value = { ...query.value }
-  mockRequest()
+  await fetchUsers()
 }
 
 // 重置
-const resetFilters = () => {
+const resetFilters = async () => {
   pagination.page = 1
-  appliedQuery.value = { ...query.value }
-  mockRequest()
+  await fetchUsers()
 }
 
 // 翻页
-const refreshPageData = () => mockRequest()
+const refreshPageData = async () => {
+  await fetchUsers()
+}
+
+const openAddDialog = () => {
+  dialogMode.value = 'add'
+  editingUserId.value = ''
+  formModel.value = createInitialFormModel()
+  dialogVisible.value = true
+}
+
+const openEditDialog = (row: UserInfo) => {
+  dialogMode.value = 'edit'
+  editingUserId.value = row.id
+  formModel.value = {
+    username: row.username,
+    email: row.email,
+    password: '',
+    nickname: row.nickname,
+    avatarUrl: row.avatarUrl || '',
+    role: row.role as UserFormModel['role'],
+    status: row.status
+  }
+  dialogVisible.value = true
+}
+
+const closeDialog = () => {
+  dialogVisible.value = false
+  formModel.value = createInitialFormModel()
+}
+
+const buildCreatePayload = (): UserCreateParams => {
+  return {
+    username: formModel.value.username.trim(),
+    email: formModel.value.email.trim(),
+    password: formModel.value.password,
+    nickname: formModel.value.nickname.trim(),
+    avatarUrl: formModel.value.avatarUrl.trim() || undefined,
+    role: formModel.value.role,
+    isActive: formModel.value.status === 'enabled'
+  }
+}
+
+const submitDialog = async () => {
+  dialogSubmitting.value = true
+
+  try {
+    if (dialogMode.value === 'add') {
+      await addUser(buildCreatePayload())
+      Message.success('用户创建成功')
+    } else {
+      await updateUserApi(editingUserId.value, {
+        email: formModel.value.email.trim(),
+        password: formModel.value.password || undefined,
+        nickname: formModel.value.nickname.trim(),
+        avatarUrl: formModel.value.avatarUrl.trim() || undefined,
+        role: formModel.value.role,
+        isActive: formModel.value.status === 'enabled'
+      })
+      Message.success('用户更新成功')
+    }
+
+    closeDialog()
+    selectedRowKeys.value = []
+    await fetchUsers()
+  } finally {
+    dialogSubmitting.value = false
+  }
+}
+
+const onDialogSubmit = async (payload: UserFormModel) => {
+  formModel.value = payload
+  await submitDialog()
+}
 
 // 行操作
 const editUser = (row: UserInfo) => {
-  Message.info(`编辑用户：${row.nickname}（${row.username}）`)
+  openEditDialog(row)
 }
 
-const toggleUserStatus = (row: UserInfo) => {
-  const target = allUsers.value.find(item => item.id === row.id)
-  if (target) {
-    target.status = target.status === 'enabled' ? 'disabled' : 'enabled'
-    Message.success(`已${target.status === 'enabled' ? '启用' : '禁用'}用户：${target.nickname}`)
-  }
+const toggleUserStatus = async (row: UserInfo) => {
+  const nextStatus: UserStatus = row.status === 'enabled' ? 'disabled' : 'enabled'
+
+  await updateUserApi(row.id, {
+    isActive: nextStatus === 'enabled'
+  })
+
+  Message.success(`已${nextStatus === 'enabled' ? '启用' : '禁用'}用户：${row.nickname}`)
+  await fetchUsers()
 }
 
 const deleteUser = (row: UserInfo) => {
@@ -161,15 +249,21 @@ const deleteUser = (row: UserInfo) => {
     confirmButtonText: '确认删除',
     cancelButtonText: '取消'
   })
-    .then(() => {
-      allUsers.value = allUsers.value.filter(item => item.id !== row.id)
+    .then(async () => {
+      await deleteUserById(row.id)
+
+      const nextTotal = Math.max(0, pagination.total - 1)
+      const maxPage = Math.max(1, Math.ceil(nextTotal / pagination.pageSize))
+      pagination.page = Math.min(pagination.page, maxPage)
+
       Message.success('删除成功')
+      await fetchUsers()
     })
     .catch(() => {})
 }
 
 const createUser = () => {
-  Message.info('新增用户功能开发中')
+  openAddDialog()
 }
 
 const deleteSelectedUsers = () => {
@@ -185,15 +279,16 @@ const deleteSelectedUsers = () => {
     confirmButtonText: '确认删除',
     cancelButtonText: '取消'
   })
-    .then(() => {
-      const selectedKeySet = new Set(selectedRowKeys.value)
-      allUsers.value = allUsers.value.filter(item => !selectedKeySet.has(item.id))
+    .then(async () => {
+      await batchDeleteUsers(selectedRowKeys.value.map(String))
+
+      const nextTotal = Math.max(0, pagination.total - deleteCount)
+      const maxPage = Math.max(1, Math.ceil(nextTotal / pagination.pageSize))
+      pagination.page = Math.min(pagination.page, maxPage)
       selectedRowKeys.value = []
 
-      const maxPage = Math.max(1, Math.ceil(filteredUsers.value.length / pagination.pageSize))
-      pagination.page = Math.min(pagination.page, maxPage)
-
       Message.success(`已删除 ${deleteCount} 个用户`)
+      await fetchUsers()
     })
     .catch(() => {})
 }
@@ -203,7 +298,7 @@ const reorderCurrentPageUsers = (payload: CommonTableRowReorderPayload) => {
   const reorderedIdSet = new Set(reorderedRows.map(row => row.id))
   let nextIndex = 0
 
-  allUsers.value = allUsers.value.map(user => {
+  tableData.value = tableData.value.map(user => {
     if (!reorderedIdSet.has(user.id)) {
       return user
     }
@@ -263,7 +358,6 @@ const baseColumns: CommonTableColumn[] = [
     cellRenderer: ({ rowData }) => h(UserIdentityCell, { row: toUserRow(rowData) })
   },
   { key: 'email', dataKey: 'email', title: '邮箱', minWidth: 220 },
-  { key: 'phone', dataKey: 'phone', title: '手机号', minWidth: 160 },
   {
     key: 'role',
     dataKey: 'role',
@@ -296,6 +390,10 @@ const baseColumns: CommonTableColumn[] = [
       })
   }
 ]
+
+onMounted(() => {
+  void fetchUsers()
+})
 </script>
 
 <template>
@@ -333,6 +431,17 @@ const baseColumns: CommonTableColumn[] = [
         </CommonTableToolbar>
       </template>
     </CommonTable>
+
+    <UserFormDialog
+      v-model:visible="dialogVisible"
+      :mode="dialogMode"
+      :title="dialogTitle"
+      :submitting="dialogSubmitting"
+      :initial-value="formModel"
+      :role-options="roleOptions"
+      :status-options="statusOptions"
+      @submit="onDialogSubmit"
+    />
   </div>
 </template>
 
