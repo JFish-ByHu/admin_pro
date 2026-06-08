@@ -5,7 +5,6 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
 // 主题持久化 key
 const THEME_STORAGE_KEY = 'vueuse-color-scheme'
-const CONTENT_REFRESH_MIN_DURATION = 450
 
 interface VisitedView {
   path: string
@@ -43,8 +42,6 @@ const getInitialDarkValue = (): boolean => {
   const hour = new Date().getHours()
   return hour < 7 || hour >= 18
 }
-
-const wait = (duration: number) => new Promise(resolve => window.setTimeout(resolve, duration))
 
 export const useAppStore = defineStore(
   'app',
@@ -107,8 +104,8 @@ export const useAppStore = defineStore(
     const sidebarCollapse = ref(isTablet.value)
     const sidebarDrawerVisible = ref(false)
     const visitedViews = ref<VisitedView[]>([DEFAULT_VISITED_VIEW])
-    const appMainVisible = ref(true)
     const isRefreshingContent = ref(false)
+    const contentRefreshSignal = ref(0)
 
     watch(isTablet, val => {
       if (val) {
@@ -169,12 +166,8 @@ export const useAppStore = defineStore(
       isRefreshingContent.value = true
 
       try {
+        contentRefreshSignal.value += 1
         await nextTick()
-        appMainVisible.value = false
-        await nextTick()
-        appMainVisible.value = true
-        await nextTick()
-        await wait(CONTENT_REFRESH_MIN_DURATION)
       } finally {
         isRefreshingContent.value = false
       }
@@ -188,8 +181,8 @@ export const useAppStore = defineStore(
       sidebarCollapse,
       sidebarDrawerVisible,
       visitedViews,
-      appMainVisible,
       isRefreshingContent,
+      contentRefreshSignal,
       toggleDarkWithTransition,
       toggleFullscreen,
       toggleSidebar,

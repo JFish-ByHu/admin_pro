@@ -43,7 +43,7 @@ export const useUserListQuery = ({
     total: 0
   })
 
-  const fetchUsers = async () => {
+  const getUsers = async () => {
     loading.value = true
 
     try {
@@ -69,16 +69,16 @@ export const useUserListQuery = ({
 
   const searchUsers = async () => {
     pagination.page = 1
-    await fetchUsers()
+    await getUsers()
   }
 
   const resetFilters = async () => {
     pagination.page = 1
-    await fetchUsers()
+    await getUsers()
   }
 
   const refreshPageData = async () => {
-    await fetchUsers()
+    await getUsers()
   }
 
   return {
@@ -87,7 +87,7 @@ export const useUserListQuery = ({
     query,
     filterFields,
     pagination,
-    fetchUsers,
+    getUsers,
     searchUsers,
     resetFilters,
     refreshPageData

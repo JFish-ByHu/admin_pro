@@ -1,6 +1,4 @@
-<script setup lang="ts">
-// Dashboard 主页
-</script>
+<script setup lang="ts"></script>
 
 <template>
   <div class="dashboard-container">

@@ -13,6 +13,7 @@ import { addUser, batchDeleteUsers, deleteUserById, updateUser as updateUserApi 
 import type { UserCreateParams, UserFormModel, UserInfo, UserStatus, UserView } from '@/types/user'
 import { USER_PERMISSION_CODES } from '@/constants/permission'
 import { Message } from '@/utils/message'
+import { useContentRefresh } from '@/composables/useContentRefresh'
 import { useUserPermissions } from './composables/useUserPermissions'
 import { useUserListQuery } from './composables/useUserListQuery'
 import {
@@ -78,7 +79,7 @@ const {
   query,
   filterFields,
   pagination,
-  fetchUsers,
+  getUsers,
   searchUsers,
   resetFilters,
   refreshPageData
@@ -181,7 +182,7 @@ const submitUserDialog = async () => {
 
     closeUserDialog()
     selectedRowKeys.value = []
-    await fetchUsers()
+    await getUsers()
   } finally {
     dialogSubmitting.value = false
   }
@@ -213,7 +214,7 @@ const toggleUserStatus = async (row: UserInfo) => {
   })
 
   Message.success(`已${nextStatus === 'enabled' ? '启用' : '禁用'}用户：${row.nickname}`)
-  await fetchUsers()
+  await getUsers()
 }
 
 const deleteUser = (row: UserInfo) => {
@@ -238,9 +239,11 @@ const deleteUser = (row: UserInfo) => {
       pagination.page = Math.min(pagination.page, maxPage)
 
       Message.success('删除成功')
-      await fetchUsers()
+      await getUsers()
     })
-    .catch(() => {})
+    .catch(err => {
+      console.error('Delete User Error:', err)
+    })
 }
 
 const createUser = () => {
@@ -276,9 +279,11 @@ const deleteSelectedUsers = () => {
       selectedRowKeys.value = []
 
       Message.success(`已删除 ${deleteCount} 个用户`)
-      await fetchUsers()
+      await getUsers()
     })
-    .catch(() => {})
+    .catch(err => {
+      console.error('Batch Delete Error:', err)
+    })
 }
 
 const reorderCurrentPageUsers = (payload: CommonTableRowReorderPayload) => {
@@ -395,8 +400,10 @@ const baseColumns: CommonTableColumn[] = [
 ]
 
 onMounted(() => {
-  void fetchUsers()
+  void getUsers()
 })
+
+useContentRefresh(() => getUsers())
 </script>
 
 <template>
