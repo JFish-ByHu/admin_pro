@@ -16,9 +16,31 @@ export interface RegisterParams {
   username: string
   email: string
   password: string
-  otp: string
-  captchaId: string
+  emailVerifyTicket: string
   keyId: string
+}
+
+export type EmailCodeScene = 'register'
+
+export interface SendEmailCodeParams {
+  email: string
+  scene: EmailCodeScene
+}
+
+export interface VerifyEmailCodeParams {
+  email: string
+  scene: EmailCodeScene
+  code: string
+}
+
+export interface SendEmailCodeResult {
+  success: boolean
+  cooldownSeconds: number
+}
+
+export interface VerifyEmailCodeResult {
+  emailVerifyTicket: string
+  expiresInSeconds: number
 }
 
 /**

@@ -1,11 +1,14 @@
 import request from '@/utils/request'
 import type {
   CaptchaResult,
+  EmailCodeScene,
   EncryptKeyResult,
   LoginParams,
   LoginResult,
   RefreshTokenResult,
-  RegisterParams
+  RegisterParams,
+  SendEmailCodeResult,
+  VerifyEmailCodeResult
 } from '@/types/auth'
 
 /**
@@ -25,6 +28,35 @@ export const getEncryptKey = (): Promise<EncryptKeyResult> => {
   return request({
     url: '/auth/encryptKey',
     method: 'get'
+  })
+}
+
+/**
+ * 发送邮箱验证码
+ */
+export const sendEmailCode = (
+  email: string,
+  scene: EmailCodeScene = 'register'
+): Promise<SendEmailCodeResult> => {
+  return request({
+    url: '/auth/emailCode/send',
+    method: 'post',
+    data: { email, scene }
+  })
+}
+
+/**
+ * 校验邮箱验证码并获取验证票据
+ */
+export const verifyEmailCode = (
+  email: string,
+  code: string,
+  scene: EmailCodeScene = 'register'
+): Promise<VerifyEmailCodeResult> => {
+  return request({
+    url: '/auth/emailCode/verify',
+    method: 'post',
+    data: { email, code, scene }
   })
 }
 

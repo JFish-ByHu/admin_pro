@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import { register, getCaptcha, getEncryptKey } from '@/api/auth'
+import { register, sendEmailCode, verifyEmailCode, getEncryptKey } from '@/api/auth'
 import { Message } from '@/utils/message'
 import { encryptAES } from '@/utils/crypto'
 
@@ -17,7 +17,7 @@ const model = ref({
   username: '',
   email: '',
   password: '',
-  otp: '',
+  emailCode: '',
   terms: false
 })
 
@@ -34,7 +34,7 @@ const rules = ref<FormRules>({
     { required: true, message: '请输入密码', trigger: ['blur', 'change'] },
     { pattern: /^[^\s]+$/, message: '密码不允许包含空格', trigger: ['blur', 'change'] }
   ],
-  otp: [
+  emailCode: [
     { required: true, message: '请输入6位验证码', trigger: ['blur', 'change'] },
     { len: 6, message: '验证码必须是6位', trigger: ['blur', 'change'] },
     { pattern: /^\d+$/, message: '验证码只能包含数字', trigger: ['blur', 'change'] }
@@ -42,23 +42,58 @@ const rules = ref<FormRules>({
 })
 
 const loading = ref(false)
-const captchaId = ref('')
-const captchaCode = ref('------')
+const sendingCode = ref(false)
+const countdown = ref(0)
+let countdownTimer: number | null = null
 
-const refreshCaptcha = async () => {
-  try {
-    const res = await getCaptcha()
-    captchaId.value = res.captchaId
-    captchaCode.value = res.code
-    model.value.otp = '' // 刷新时清空输入框
-  } catch (error) {
-    console.error('Get Captcha Error:', error)
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const clearCountdownTimer = () => {
+  if (countdownTimer !== null) {
+    window.clearInterval(countdownTimer)
+    countdownTimer = null
   }
 }
 
-onMounted(() => {
-  refreshCaptcha()
+const startCountdown = (seconds: number) => {
+  clearCountdownTimer()
+  countdown.value = seconds
+
+  countdownTimer = window.setInterval(() => {
+    if (countdown.value <= 1) {
+      countdown.value = 0
+      clearCountdownTimer()
+      return
+    }
+
+    countdown.value -= 1
+  }, 1000)
+}
+
+onBeforeUnmount(() => {
+  clearCountdownTimer()
 })
+
+const sendRegisterEmailCode = async () => {
+  if (countdown.value > 0 || sendingCode.value) {
+    return
+  }
+
+  const email = model.value.email.trim()
+  if (!emailPattern.test(email)) {
+    Message.warning('请先输入有效的邮箱地址')
+    return
+  }
+
+  sendingCode.value = true
+  try {
+    const res = await sendEmailCode(email, 'register')
+    startCountdown(res.cooldownSeconds)
+    Message.success('验证码已发送，请注意查收邮箱')
+  } finally {
+    sendingCode.value = false
+  }
+}
 
 const submitRegister = () => {
   formRef.value?.validate(async valid => {
@@ -75,12 +110,17 @@ const submitRegister = () => {
         // 使用动态密钥对密码进行 AES 加密
         const encryptedPassword = encryptAES(model.value.password, keyRes.aesKey)
 
+        const verifyRes = await verifyEmailCode(
+          model.value.email.trim(),
+          model.value.emailCode,
+          'register'
+        )
+
         await register({
-          username: model.value.username,
-          email: model.value.email,
+          username: model.value.username.trim(),
+          email: model.value.email.trim(),
           password: encryptedPassword,
-          otp: model.value.otp,
-          captchaId: captchaId.value,
+          emailVerifyTicket: verifyRes.emailVerifyTicket,
           keyId: keyRes.keyId
         })
 
@@ -93,7 +133,6 @@ const submitRegister = () => {
         emit('switch-mode', 'login')
       } catch (error) {
         console.error('Register Error:', error)
-        refreshCaptcha() // 注册失败自动刷新验证码
       } finally {
         loading.value = false
       }
@@ -150,12 +189,17 @@ const socialRegister = () => {
       </el-form-item>
 
       <!-- 验证码输入 -->
-      <el-form-item prop="otp" label="Verification Code">
+      <el-form-item prop="emailCode" label="Verification Code">
         <div class="otp-wrapper">
-          <el-input-otp v-model="model.otp" :length="6" size="large" class="otp-input" />
-          <div class="otp-display" title="点击刷新验证码" @click="refreshCaptcha">
-            <span class="capatcha-content">{{ captchaCode }}</span>
-          </div>
+          <el-input-otp v-model="model.emailCode" :length="6" size="large" class="otp-input" />
+          <el-button
+            class="otp-send-btn"
+            :loading="sendingCode"
+            :disabled="countdown > 0"
+            @click="sendRegisterEmailCode"
+          >
+            {{ countdown > 0 ? `${countdown}s 后重发` : '发送验证码' }}
+          </el-button>
         </div>
       </el-form-item>
 
@@ -237,32 +281,18 @@ const socialRegister = () => {
       min-width: 0;
     }
 
-    .otp-display {
+    .otp-send-btn {
       display: flex;
       justify-content: center;
       align-items: center;
-      width: 120px;
-      height: 40px;
+      width: 124px;
+      height: 42px;
       flex-shrink: 0;
-      background-color: var(--c-primary-bg);
       border-radius: var(--radius-md);
-      border: 1px solid var(--c-primary-border);
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background-color: var(--c-primary-border);
-        border-color: var(--c-primary-border-hover);
-      }
-
-      .capatcha-content {
-        font-family: monospace;
-        font-size: 20px;
-        font-weight: bold;
-        letter-spacing: 4px;
-        color: var(--c-primary-dark);
-        user-select: none;
-      }
+      font-weight: 600;
+      border-color: var(--c-primary-border);
+      color: var(--c-primary);
+      background-color: var(--c-primary-bg);
     }
   }
 
