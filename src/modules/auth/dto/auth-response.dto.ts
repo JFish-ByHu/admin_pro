@@ -8,6 +8,16 @@ export class EncryptKeyResponseDto {
   aesKey!: string
 }
 
+export class SendEmailCodeResponseDto {
+  success!: boolean
+  cooldownSeconds!: number
+}
+
+export class VerifyEmailCodeResponseDto {
+  emailVerifyTicket!: string
+  expiresInSeconds!: number
+}
+
 export class RegisterUserResponseDto {
   id!: string
   username!: string

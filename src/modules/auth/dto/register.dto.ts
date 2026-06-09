@@ -15,14 +15,9 @@ export class RegisterDto {
   @Matches(/^[^\s]+$/, { message: '密码不允许包含空格' })
   password!: string
 
-  @IsNotEmpty({ message: '验证码不能为空' })
-  @Length(6, 6, { message: '验证码必须是6位数字' })
-  @Matches(/^\d+$/, { message: '验证码只能包含数字' })
-  otp!: string
-
-  @IsNotEmpty({ message: '验证码标识不能为空' })
+  @IsNotEmpty({ message: '邮箱验证票据不能为空' })
   @IsString()
-  captchaId!: string
+  emailVerifyTicket!: string
 
   @IsNotEmpty({ message: '加密标识不能为空' })
   @IsString()

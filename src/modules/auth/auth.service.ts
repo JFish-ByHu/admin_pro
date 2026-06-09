@@ -1,14 +1,26 @@
-import { Injectable, BadRequestException, UnauthorizedException, Inject } from '@nestjs/common'
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+  Inject,
+  InternalServerErrorException
+} from '@nestjs/common'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import type { Cache } from 'cache-manager'
 import { randomUUID } from 'crypto'
 import * as crypto from 'crypto'
 import { JwtService } from '@nestjs/jwt'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
 import { UserService } from '../user/user.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { SendEmailCodeDto } from './dto/send-email-code.dto'
+import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
 import { getRequiredEnv } from '../../common/config/env'
 import { PasswordUtil } from '../../common/utils/password.util'
+import { EmailVerification } from './entities/email-verification.entity'
+import { MailService } from './mail.service'
 import {
   AuthUserInfoDto,
   CaptchaResponseDto,
@@ -16,18 +28,41 @@ import {
   LoginResponseDto,
   LogoutResponseDto,
   RefreshTokenResponseDto,
-  RegisterResponseDto
+  RegisterResponseDto,
+  SendEmailCodeResponseDto,
+  VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
 
+// Refresh Token 缓存键前缀
 const REFRESH_TOKEN_CACHE_PREFIX = 'auth:refresh-token:'
+// Refresh Token 有效期（毫秒）= 7 天
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60 * 1000
+
+// 邮箱验证码有效期（毫秒）= 5 分钟
+const EMAIL_CODE_EXPIRES_MS = 5 * 60 * 1000
+// 邮箱验证码重发冷却时间（毫秒）= 60 秒
+const EMAIL_CODE_RESEND_INTERVAL_MS = 60 * 1000
+// 单邮箱单场景每日发送上限
+const EMAIL_CODE_DAILY_LIMIT = 50
+// 单条验证码最大错误尝试次数
+const EMAIL_CODE_MAX_ATTEMPTS = 5
+// 单 IP 每小时发送上限
+const EMAIL_CODE_IP_HOURLY_LIMIT = 30
+
+// 邮箱验证票据缓存键前缀
+const EMAIL_VERIFY_TICKET_PREFIX = 'auth:email-ticket:'
+// 邮箱验证票据有效期（毫秒）= 10 分钟
+const EMAIL_VERIFY_TICKET_TTL_MS = 10 * 60 * 1000
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache
+    private readonly mailService: MailService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    @InjectRepository(EmailVerification)
+    private readonly emailVerificationRepository: Repository<EmailVerification>
   ) {}
 
   /**
@@ -108,6 +143,20 @@ export class AuthService {
     }
   }
 
+  private toSendEmailCodeResponseDto(cooldownSeconds: number): SendEmailCodeResponseDto {
+    return {
+      success: true,
+      cooldownSeconds
+    }
+  }
+
+  private toVerifyEmailCodeResponseDto(ticket: string): VerifyEmailCodeResponseDto {
+    return {
+      emailVerifyTicket: ticket,
+      expiresInSeconds: Math.floor(EMAIL_VERIFY_TICKET_TTL_MS / 1000)
+    }
+  }
+
   private toRegisterResponseDto(user: {
     id: string
     username: string
@@ -120,6 +169,189 @@ export class AuthService {
         email: user.email
       }
     }
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase()
+  }
+
+  private generateEmailCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString()
+  }
+
+  private getTodayKey(): string {
+    return new Date().toISOString().slice(0, 10)
+  }
+
+  private buildEmailCodeHash(email: string, scene: string, code: string): string {
+    const secret = getRequiredEnv('EMAIL_CODE_HASH_SECRET')
+    return crypto.createHash('sha256').update(`${secret}:${scene}:${email}:${code}`).digest('hex')
+  }
+
+  private buildEmailVerifyTicketCacheKey(ticket: string): string {
+    return `${EMAIL_VERIFY_TICKET_PREFIX}${ticket}`
+  }
+
+  private async issueEmailVerifyTicket(email: string, scene: string): Promise<string> {
+    const ticket = randomUUID()
+
+    await this.cacheManager.set(
+      this.buildEmailVerifyTicketCacheKey(ticket),
+      { email, scene },
+      EMAIL_VERIFY_TICKET_TTL_MS
+    )
+
+    return ticket
+  }
+
+  private async consumeEmailVerifyTicket(
+    email: string,
+    scene: string,
+    ticket: string
+  ): Promise<void> {
+    const key = this.buildEmailVerifyTicketCacheKey(ticket)
+    const payload = await this.cacheManager.get<{ email: string; scene: string }>(key)
+
+    if (!payload) {
+      throw new BadRequestException('邮箱验证凭证无效，请重新获取验证码')
+    }
+
+    await this.cacheManager.del(key)
+
+    if (payload.email !== email || payload.scene !== scene) {
+      throw new BadRequestException('邮箱验证凭证无效，请重新获取验证码')
+    }
+  }
+
+  private buildIpHourlyLimitCacheKey(ip: string): string {
+    const hourBucket = new Date().toISOString().slice(0, 13)
+    return `auth:email-code:ip:${ip}:${hourBucket}`
+  }
+
+  private async verifyIpSendLimit(ip?: string): Promise<void> {
+    if (!ip) {
+      return
+    }
+
+    const key = this.buildIpHourlyLimitCacheKey(ip)
+    const currentCount = (await this.cacheManager.get<number>(key)) ?? 0
+
+    if (currentCount >= EMAIL_CODE_IP_HOURLY_LIMIT) {
+      throw new BadRequestException('发送过于频繁，请稍后再试')
+    }
+
+    await this.cacheManager.set(key, currentCount + 1, 60 * 60 * 1000)
+  }
+
+  private async getLatestEmailVerification(
+    email: string,
+    scene: string
+  ): Promise<EmailVerification | null> {
+    return this.emailVerificationRepository.findOne({
+      where: { email, scene },
+      order: { createTime: 'DESC' }
+    })
+  }
+
+  async sendEmailCode(
+    dto: SendEmailCodeDto,
+    context: { ip?: string; userAgent?: string }
+  ): Promise<SendEmailCodeResponseDto> {
+    const email = this.normalizeEmail(dto.email)
+    const scene = dto.scene
+    const todayKey = this.getTodayKey()
+
+    await this.verifyIpSendLimit(context.ip)
+
+    const latestRecord = await this.getLatestEmailVerification(email, scene)
+    const now = Date.now()
+
+    if (latestRecord?.lastSentAt) {
+      const elapsed = now - latestRecord.lastSentAt.getTime()
+      if (elapsed < EMAIL_CODE_RESEND_INTERVAL_MS) {
+        throw new BadRequestException('发送过于频繁，请稍后再试')
+      }
+    }
+
+    const isSameDay = latestRecord?.sendCountDate === todayKey
+    const todaySendCount = isSameDay ? (latestRecord?.sendCountDaily ?? 0) : 0
+    if (todaySendCount >= EMAIL_CODE_DAILY_LIMIT) {
+      throw new BadRequestException('今日发送次数已达上限，请明日再试')
+    }
+
+    if (scene === 'register') {
+      const emailOwner = await this.userService.checkUserExists('__placeholder__', email)
+      if (emailOwner?.email === email) {
+        return this.toSendEmailCodeResponseDto(Math.floor(EMAIL_CODE_RESEND_INTERVAL_MS / 1000))
+      }
+    }
+
+    const code = this.generateEmailCode()
+
+    try {
+      await this.mailService.sendRegisterCode(
+        email,
+        code,
+        Math.floor(EMAIL_CODE_EXPIRES_MS / 60000)
+      )
+    } catch {
+      throw new InternalServerErrorException('邮件发送失败，请稍后再试')
+    }
+
+    const nextRecord = latestRecord ?? this.emailVerificationRepository.create({ email, scene })
+    nextRecord.codeHash = this.buildEmailCodeHash(email, scene, code)
+    nextRecord.expiresAt = new Date(now + EMAIL_CODE_EXPIRES_MS)
+    nextRecord.usedAt = null
+    nextRecord.attemptCount = 0
+    nextRecord.lastSentAt = new Date(now)
+    nextRecord.sendCountDate = todayKey
+    nextRecord.sendCountDaily = todaySendCount + 1
+    nextRecord.clientIp = context.ip ?? null
+    nextRecord.userAgent = context.userAgent ?? null
+
+    await this.emailVerificationRepository.save(nextRecord)
+
+    return this.toSendEmailCodeResponseDto(Math.floor(EMAIL_CODE_RESEND_INTERVAL_MS / 1000))
+  }
+
+  async verifyEmailCode(dto: VerifyEmailCodeDto): Promise<VerifyEmailCodeResponseDto> {
+    const email = this.normalizeEmail(dto.email)
+    const scene = dto.scene
+    const record = await this.getLatestEmailVerification(email, scene)
+
+    if (!record) {
+      throw new BadRequestException('验证码无效或已过期')
+    }
+
+    if (record.usedAt) {
+      throw new BadRequestException('验证码已使用，请重新获取')
+    }
+
+    if (record.expiresAt.getTime() < Date.now()) {
+      throw new BadRequestException('验证码已过期，请重新获取')
+    }
+
+    if (record.attemptCount >= EMAIL_CODE_MAX_ATTEMPTS) {
+      throw new BadRequestException('验证码错误次数过多，请重新获取')
+    }
+
+    const codeHash = this.buildEmailCodeHash(email, scene, dto.code)
+    if (record.codeHash !== codeHash) {
+      record.attemptCount += 1
+      await this.emailVerificationRepository.save(record)
+
+      if (record.attemptCount >= EMAIL_CODE_MAX_ATTEMPTS) {
+        throw new BadRequestException('验证码错误次数过多，请重新获取')
+      }
+
+      throw new BadRequestException('验证码错误')
+    }
+
+    record.usedAt = new Date()
+    await this.emailVerificationRepository.save(record)
+
+    const ticket = await this.issueEmailVerifyTicket(email, scene)
+    return this.toVerifyEmailCodeResponseDto(ticket)
   }
 
   async logout(userId: string): Promise<LogoutResponseDto> {
@@ -261,10 +493,10 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<RegisterResponseDto> {
-    const { username, email, password, otp, captchaId } = registerDto
+    const { username, password, emailVerifyTicket } = registerDto
+    const email = this.normalizeEmail(registerDto.email)
 
-    // 校验验证码
-    await this.verifyCaptcha(captchaId, otp)
+    await this.consumeEmailVerifyTicket(email, 'register', emailVerifyTicket)
 
     const existingUser = await this.userService.checkUserExists(username, email)
     if (existingUser) {

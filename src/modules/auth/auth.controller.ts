@@ -14,15 +14,19 @@ import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
+import { SendEmailCodeDto } from './dto/send-email-code.dto'
+import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
 import { success } from '../../common/response/api-response'
 import type { ApiSuccessBody } from '../../common/response/api-response'
 import {
   CaptchaResponseDto,
   EncryptKeyResponseDto,
+  SendEmailCodeResponseDto,
   LoginResponseDto,
   LogoutResponseDto,
   RefreshTokenResponseDto,
-  RegisterResponseDto
+  RegisterResponseDto,
+  VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
 import { PasswordDecryptInterceptor } from '../../common/interceptors/password-decrypt.interceptor'
 
@@ -38,6 +42,32 @@ export class AuthController {
   @Get('encryptKey')
   async getEncryptKey(): Promise<ApiSuccessBody<EncryptKeyResponseDto>> {
     return success(await this.authService.generateEncryptKey())
+  }
+
+  @Post('emailCode/send')
+  @HttpCode(HttpStatus.OK)
+  async sendEmailCode(
+    @Body() dto: SendEmailCodeDto,
+    @Req() request: { ip?: string; headers: Record<string, string | string[] | undefined> }
+  ): Promise<ApiSuccessBody<SendEmailCodeResponseDto>> {
+    const userAgent = Array.isArray(request.headers['user-agent'])
+      ? request.headers['user-agent'][0]
+      : request.headers['user-agent']
+
+    return success(
+      await this.authService.sendEmailCode(dto, {
+        ip: request.ip,
+        userAgent
+      })
+    )
+  }
+
+  @Post('emailCode/verify')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmailCode(
+    @Body() dto: VerifyEmailCodeDto
+  ): Promise<ApiSuccessBody<VerifyEmailCodeResponseDto>> {
+    return success(await this.authService.verifyEmailCode(dto))
   }
 
   @Post('refresh')
