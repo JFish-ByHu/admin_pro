@@ -9,18 +9,42 @@ export interface LoginParams {
   keyId: string
 }
 
+export interface EmailLoginParams {
+  email: string
+  emailVerifyTicket: string
+}
+
 /**
  * 注册参数
  */
 export interface RegisterParams {
-  username: string
+  username?: string
   email: string
   password: string
   emailVerifyTicket: string
   keyId: string
 }
 
-export type EmailCodeScene = 'register'
+export interface CheckResetEmailParams {
+  email: string
+}
+
+export interface ResetPasswordParams {
+  email: string
+  password: string
+  emailVerifyTicket: string
+  keyId: string
+}
+
+export interface CheckResetEmailResult {
+  exists: boolean
+}
+
+export interface ResetPasswordResult {
+  success: boolean
+}
+
+export type EmailCodeScene = 'register' | 'login' | 'reset'
 
 export interface SendEmailCodeParams {
   email: string

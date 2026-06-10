@@ -1,12 +1,16 @@
 import request from '@/utils/request'
 import type {
   CaptchaResult,
+  CheckResetEmailResult,
+  EmailLoginParams,
   EmailCodeScene,
   EncryptKeyResult,
   LoginParams,
   LoginResult,
   RefreshTokenResult,
   RegisterParams,
+  ResetPasswordParams,
+  ResetPasswordResult,
   SendEmailCodeResult,
   VerifyEmailCodeResult
 } from '@/types/auth'
@@ -79,6 +83,30 @@ export const refreshTokens = (refreshToken: string): Promise<RefreshTokenResult>
 export const login = (data: LoginParams): Promise<LoginResult> => {
   return request({
     url: '/auth/login',
+    method: 'post',
+    data
+  })
+}
+
+export const emailLogin = (data: EmailLoginParams): Promise<LoginResult> => {
+  return request({
+    url: '/auth/emailLogin',
+    method: 'post',
+    data
+  })
+}
+
+export const checkResetEmail = (email: string): Promise<CheckResetEmailResult> => {
+  return request({
+    url: '/auth/password/emailCheck',
+    method: 'post',
+    data: { email }
+  })
+}
+
+export const resetPassword = (data: ResetPasswordParams): Promise<ResetPasswordResult> => {
+  return request({
+    url: '/auth/password/reset',
     method: 'post',
     data
   })

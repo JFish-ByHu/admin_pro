@@ -10,7 +10,7 @@ const formRef = ref<FormInstance | null>(null)
 const emit = defineEmits<{
   (e: 'password-focus'): void
   (e: 'password-blur'): void
-  (e: 'switch-mode', mode: 'login'): void
+  (e: 'switch-mode', mode: 'register' | 'login' | 'email-login' | 'email-register'): void
 }>()
 
 const model = ref({
@@ -89,7 +89,12 @@ const sendRegisterEmailCode = async () => {
   try {
     const res = await sendEmailCode(email, 'register')
     startCountdown(res.cooldownSeconds)
-    Message.success('验证码已发送，请注意查收邮箱')
+    ElNotification({
+      title: 'Verification Code Sent',
+      message: `验证码已发送至 ${email}`,
+      type: 'success',
+      duration: 1500
+    })
   } finally {
     sendingCode.value = false
   }
@@ -143,11 +148,7 @@ const submitRegister = () => {
 }
 
 const socialRegister = () => {
-  ElNotification({
-    title: 'Feature Coming Soon',
-    message: '社交账号注册功能正在接入中，敬请期待！',
-    type: 'info'
-  })
+  emit('switch-mode', 'email-register')
 }
 </script>
 

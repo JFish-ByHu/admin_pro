@@ -1,13 +1,45 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { AuthBg, AuthHeader, LoginForm, RegisterForm } from './CompsExport'
+import {
+  AuthBg,
+  AuthHeader,
+  LoginForm,
+  RegisterForm,
+  EmailAuthForm,
+  ForgotPasswordForm
+} from './CompsExport'
 
 // 控制当前显示的是登录还是注册表单
-const currentMode = ref<'login' | 'register'>('login')
+type AuthMode = 'login' | 'register' | 'email-login' | 'email-register' | 'forgot-password'
+const currentMode = ref<AuthMode>('login')
 
 // 动态渲染登录 / 注册表单组件
 const currentFormComponent = computed(() => {
-  return currentMode.value === 'login' ? LoginForm : RegisterForm
+  if (currentMode.value === 'register') {
+    return RegisterForm
+  }
+
+  if (currentMode.value === 'email-login' || currentMode.value === 'email-register') {
+    return EmailAuthForm
+  }
+
+  if (currentMode.value === 'forgot-password') {
+    return ForgotPasswordForm
+  }
+
+  return LoginForm
+})
+
+const currentFormProps = computed<Record<string, unknown>>(() => {
+  if (currentMode.value === 'email-login') {
+    return { mode: 'login' }
+  }
+
+  if (currentMode.value === 'email-register') {
+    return { mode: 'register' }
+  }
+
+  return {}
 })
 
 // 控制背景眼睛是否闭合的状态
@@ -21,7 +53,7 @@ const deactivateBlindMode = () => {
   isBlind.value = false
 }
 
-const switchAuthMode = (mode: 'login' | 'register') => {
+const switchAuthMode = (mode: AuthMode) => {
   currentMode.value = mode
   isBlind.value = false
 }
@@ -37,6 +69,7 @@ const switchAuthMode = (mode: 'login' | 'register') => {
         <transition name="fade-slide" mode="out-in">
           <component
             :is="currentFormComponent"
+            v-bind="currentFormProps"
             @password-focus="activateBlindMode"
             @password-blur="deactivateBlindMode"
             @switch-mode="switchAuthMode"

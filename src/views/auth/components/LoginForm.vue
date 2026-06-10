@@ -14,7 +14,10 @@ const userStore = useUserStore()
 const emit = defineEmits<{
   (e: 'password-focus'): void
   (e: 'password-blur'): void
-  (e: 'switch-mode', mode: 'register'): void
+  (
+    e: 'switch-mode',
+    mode: 'register' | 'login' | 'email-login' | 'email-register' | 'forgot-password'
+  ): void
 }>()
 
 const model = ref({
@@ -125,19 +128,11 @@ const submitLogin = () => {
 }
 
 const socialLogin = () => {
-  ElNotification({
-    title: 'Feature Coming Soon',
-    message: '社交账号登录功能正在接入中，敬请期待！',
-    type: 'info'
-  })
+  emit('switch-mode', 'email-login')
 }
 
 const forgetPassword = () => {
-  ElNotification({
-    title: 'Reset Password',
-    message: '重置密码模块开发中...',
-    type: 'info'
-  })
+  emit('switch-mode', 'forgot-password')
 }
 </script>
 
