@@ -1,6 +1,6 @@
 import { IsEmail, IsIn, IsNotEmpty } from 'class-validator'
 
-const EMAIL_CODE_SCENES = ['register'] as const
+const EMAIL_CODE_SCENES = ['register', 'login', 'reset'] as const
 
 export type EmailCodeScene = (typeof EMAIL_CODE_SCENES)[number]
 

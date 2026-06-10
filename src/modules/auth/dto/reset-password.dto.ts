@@ -1,11 +1,6 @@
-import { IsString, IsNotEmpty, Length, Matches, IsEmail, IsOptional } from 'class-validator'
+import { IsEmail, IsNotEmpty, IsString, Length, Matches } from 'class-validator'
 
-export class RegisterDto {
-  @IsOptional()
-  @IsString()
-  @Matches(/^[a-zA-Z0-9]+$/, { message: '用户名仅允许字母和数字' })
-  username?: string
-
+export class ResetPasswordDto {
   @IsNotEmpty({ message: '邮箱不能为空' })
   @IsEmail({}, { message: '请输入有效的邮箱格式' })
   email!: string

@@ -18,6 +18,14 @@ export class VerifyEmailCodeResponseDto {
   expiresInSeconds!: number
 }
 
+export class CheckResetEmailResponseDto {
+  exists!: boolean
+}
+
+export class ResetPasswordResponseDto {
+  success!: boolean
+}
+
 export class RegisterUserResponseDto {
   id!: string
   username!: string

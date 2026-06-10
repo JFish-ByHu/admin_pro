@@ -52,20 +52,73 @@ export class MailService {
     return this.transporter
   }
 
-  async sendRegisterCode(email: string, code: string, expiresMinutes: number): Promise<void> {
+  async sendEmailCode(
+    email: string,
+    code: string,
+    scene: 'register' | 'login' | 'reset',
+    expiresMinutes: number
+  ): Promise<void> {
     const from = getRequiredEnv('EMAIL_FROM')
+    const sceneTextMap = {
+      register: {
+        subject: 'Admin Pro 注册验证码',
+        title: '用户注册验证码',
+        desc: '您正在进行账号注册，请使用以下验证码完成验证：'
+      },
+      login: {
+        subject: 'Admin Pro 登录验证码',
+        title: '用户登录验证码',
+        desc: '您正在进行邮箱登录，请使用以下验证码完成验证：'
+      },
+      reset: {
+        subject: 'Admin Pro 重置密码验证码',
+        title: '重置密码验证码',
+        desc: '您正在进行密码重置，请使用以下验证码完成验证：'
+      }
+    } as const
+    const sceneMeta = sceneTextMap[scene]
 
     await this.getTransporter().sendMail({
       from,
       to: email,
-      subject: 'Admin Pro 注册验证码',
-      text: `您的注册验证码为 ${code}，${expiresMinutes} 分钟内有效。若非本人操作请忽略。`,
+      subject: sceneMeta.subject,
+      text: `您的验证码为 ${code}，${expiresMinutes} 分钟内有效。若非本人操作请忽略。`,
       html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.7; color: #1f2937;">
-          <h2 style="margin: 0 0 12px;">Admin Pro 注册验证码</h2>
-          <p style="margin: 0 0 8px;">您的验证码为：</p>
-          <p style="font-size: 28px; font-weight: 700; letter-spacing: 6px; margin: 0 0 12px;">${code}</p>
-          <p style="margin: 0;">验证码 ${expiresMinutes} 分钟内有效。若非本人操作请忽略本邮件。</p>
+        <div style="background:linear-gradient(135deg,#1677ff,#4096ff);padding:28px 32px;color:#fff;">
+          <h1 style="margin:0;font-size:24px;font-weight:600;">Admin Pro</h1>
+          <p style="margin:8px 0 0;opacity:.9;font-size:14px;">${sceneMeta.title}</p>
+        </div>
+
+        <div style="padding:36px 32px;">
+          <p style="margin:0 0 16px;color:#374151;font-size:16px;">
+            ${sceneMeta.desc}
+          </p>
+
+          <div
+            style="background:#f8fafc;border:1px dashed #1677ff;border-radius:10px;padding:20px;text-align:center;margin:24px 0;"
+          >
+            <div style="font-size:36px;font-weight:700;letter-spacing:10px;color:#1677ff;">${code}</div>
+          </div>
+
+          <div
+            style="background:#fff7e6;border-left:4px solid #faad14;padding:12px 16px;margin-bottom:20px;border-radius:4px;"
+          >
+            <span style="color:#d48806;font-size:14px;">
+              验证码将在 ${expiresMinutes} 分钟后失效
+            </span>
+          </div>
+
+          <p style="margin:0;color:#6b7280;font-size:14px;line-height:1.8;">
+            若本次操作并非您本人发起，请忽略此邮件，您的账户不会受到影响。
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div
+          style="border-top:1px solid #f0f0f0;padding:20px 32px;background:#fafafa;color:#9ca3af;font-size:12px;text-align:center;line-height:1.8;"
+        >
+          此邮件由系统自动发送，请勿直接回复。<br />
+          © Admin Pro
         </div>
       `
     })

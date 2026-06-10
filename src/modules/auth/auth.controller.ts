@@ -13,19 +13,24 @@ import { AuthGuard } from '@nestjs/passport'
 import { AuthService } from './auth.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { EmailLoginDto } from './dto/email-login.dto'
 import { RefreshTokenDto } from './dto/refresh-token.dto'
 import { SendEmailCodeDto } from './dto/send-email-code.dto'
 import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
+import { CheckResetEmailDto } from './dto/check-reset-email.dto'
+import { ResetPasswordDto } from './dto/reset-password.dto'
 import { success } from '../../common/response/api-response'
 import type { ApiSuccessBody } from '../../common/response/api-response'
 import {
   CaptchaResponseDto,
   EncryptKeyResponseDto,
   SendEmailCodeResponseDto,
+  CheckResetEmailResponseDto,
   LoginResponseDto,
   LogoutResponseDto,
   RefreshTokenResponseDto,
   RegisterResponseDto,
+  ResetPasswordResponseDto,
   VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
 import { PasswordDecryptInterceptor } from '../../common/interceptors/password-decrypt.interceptor'
@@ -70,6 +75,23 @@ export class AuthController {
     return success(await this.authService.verifyEmailCode(dto))
   }
 
+  @Post('password/emailCheck')
+  @HttpCode(HttpStatus.OK)
+  async checkResetEmail(
+    @Body() dto: CheckResetEmailDto
+  ): Promise<ApiSuccessBody<CheckResetEmailResponseDto>> {
+    return success(await this.authService.checkResetEmail(dto))
+  }
+
+  @Post('password/reset')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(PasswordDecryptInterceptor)
+  async resetPassword(
+    @Body() dto: ResetPasswordDto
+  ): Promise<ApiSuccessBody<ResetPasswordResponseDto>> {
+    return success(await this.authService.resetPassword(dto))
+  }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refreshToken(
@@ -89,6 +111,12 @@ export class AuthController {
   @UseInterceptors(PasswordDecryptInterceptor)
   async login(@Body() loginDto: LoginDto): Promise<ApiSuccessBody<LoginResponseDto>> {
     return success(await this.authService.login(loginDto))
+  }
+
+  @Post('emailLogin')
+  @HttpCode(HttpStatus.OK)
+  async emailLogin(@Body() dto: EmailLoginDto): Promise<ApiSuccessBody<LoginResponseDto>> {
+    return success(await this.authService.emailLogin(dto))
   }
 
   @Post('logout')

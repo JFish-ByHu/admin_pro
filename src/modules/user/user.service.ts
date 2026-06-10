@@ -55,6 +55,17 @@ export class UserService {
     })
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { email },
+      relations: { roles: { permissions: true } }
+    })
+  }
+
+  async findByUsername(username: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { username } })
+  }
+
   // 根据 ID 查找用户（附带角色和权限关联数据）
   async findById(id: string): Promise<User | null> {
     return this.userRepository.findOne({
@@ -66,6 +77,11 @@ export class UserService {
   // 更新最后登录时间
   async updateLastLogin(id: string): Promise<void> {
     await this.userRepository.update(id, { lastLoginAt: new Date() })
+  }
+
+  // 内部调用：按用户 ID 更新密码哈希
+  async updatePasswordHash(id: string, passwordHash: string): Promise<void> {
+    await this.userRepository.update(id, { passwordHash })
   }
 
   // ─── 用户管理 CRUD ───────────────────────────────────────────────────────────

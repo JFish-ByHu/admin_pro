@@ -15,8 +15,11 @@ import { Repository } from 'typeorm'
 import { UserService } from '../user/user.service'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
+import { EmailLoginDto } from './dto/email-login.dto'
 import { SendEmailCodeDto } from './dto/send-email-code.dto'
 import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
+import { CheckResetEmailDto } from './dto/check-reset-email.dto'
+import { ResetPasswordDto } from './dto/reset-password.dto'
 import { getRequiredEnv } from '../../common/config/env'
 import { PasswordUtil } from '../../common/utils/password.util'
 import { EmailVerification } from './entities/email-verification.entity'
@@ -24,11 +27,13 @@ import { MailService } from './mail.service'
 import {
   AuthUserInfoDto,
   CaptchaResponseDto,
+  CheckResetEmailResponseDto,
   EncryptKeyResponseDto,
   LoginResponseDto,
   LogoutResponseDto,
   RefreshTokenResponseDto,
   RegisterResponseDto,
+  ResetPasswordResponseDto,
   SendEmailCodeResponseDto,
   VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
@@ -157,6 +162,18 @@ export class AuthService {
     }
   }
 
+  private toCheckResetEmailResponseDto(): CheckResetEmailResponseDto {
+    return {
+      exists: true
+    }
+  }
+
+  private toResetPasswordResponseDto(): ResetPasswordResponseDto {
+    return {
+      success: true
+    }
+  }
+
   private toRegisterResponseDto(user: {
     id: string
     username: string
@@ -177,6 +194,27 @@ export class AuthService {
 
   private generateEmailCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString()
+  }
+
+  private buildAutoUsernameCandidate(): string {
+    return `user${randomUUID().replace(/-/g, '').slice(0, 8)}`
+  }
+
+  private async generateAutoUsername(): Promise<string> {
+    for (let i = 0; i < 6; i += 1) {
+      const candidate = this.buildAutoUsernameCandidate()
+      const exists = await this.userService.findByUsername(candidate)
+
+      if (!exists) {
+        return candidate
+      }
+    }
+
+    throw new InternalServerErrorException('用户名生成失败，请稍后重试')
+  }
+
+  private buildAutoNickname(username: string): string {
+    return `昵称${username.slice(-6)}`
   }
 
   private getTodayKey(): string {
@@ -253,6 +291,20 @@ export class AuthService {
     })
   }
 
+  private async ensureResetEmailOwner(email: string): Promise<void> {
+    const user = await this.userService.findByEmail(email)
+
+    if (!user || !user.isActive) {
+      throw new BadRequestException('该邮箱未关联可用账号')
+    }
+  }
+
+  async checkResetEmail(dto: CheckResetEmailDto): Promise<CheckResetEmailResponseDto> {
+    const email = this.normalizeEmail(dto.email)
+    await this.ensureResetEmailOwner(email)
+    return this.toCheckResetEmailResponseDto()
+  }
+
   async sendEmailCode(
     dto: SendEmailCodeDto,
     context: { ip?: string; userAgent?: string }
@@ -280,18 +332,30 @@ export class AuthService {
     }
 
     if (scene === 'register') {
-      const emailOwner = await this.userService.checkUserExists('__placeholder__', email)
+      const emailOwner = await this.userService.findByEmail(email)
       if (emailOwner?.email === email) {
         return this.toSendEmailCodeResponseDto(Math.floor(EMAIL_CODE_RESEND_INTERVAL_MS / 1000))
       }
     }
 
+    if (scene === 'login') {
+      const user = await this.userService.findByEmail(email)
+      if (!user || !user.isActive) {
+        return this.toSendEmailCodeResponseDto(Math.floor(EMAIL_CODE_RESEND_INTERVAL_MS / 1000))
+      }
+    }
+
+    if (scene === 'reset') {
+      await this.ensureResetEmailOwner(email)
+    }
+
     const code = this.generateEmailCode()
 
     try {
-      await this.mailService.sendRegisterCode(
+      await this.mailService.sendEmailCode(
         email,
         code,
+        scene,
         Math.floor(EMAIL_CODE_EXPIRES_MS / 60000)
       )
     } catch {
@@ -493,10 +557,16 @@ export class AuthService {
   }
 
   async register(registerDto: RegisterDto): Promise<RegisterResponseDto> {
-    const { username, password, emailVerifyTicket } = registerDto
+    const { password, emailVerifyTicket } = registerDto
     const email = this.normalizeEmail(registerDto.email)
+    const username = registerDto.username?.trim() || (await this.generateAutoUsername())
 
     await this.consumeEmailVerifyTicket(email, 'register', emailVerifyTicket)
+
+    const emailOwner = await this.userService.findByEmail(email)
+    if (emailOwner) {
+      throw new BadRequestException('该邮箱已被注册')
+    }
 
     const existingUser = await this.userService.checkUserExists(username, email)
     if (existingUser) {
@@ -512,10 +582,27 @@ export class AuthService {
     const newUser = await this.userService.create({
       username,
       email,
-      passwordHash
+      passwordHash,
+      nickname: this.buildAutoNickname(username)
     })
 
     return this.toRegisterResponseDto(newUser)
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<ResetPasswordResponseDto> {
+    const email = this.normalizeEmail(dto.email)
+
+    await this.consumeEmailVerifyTicket(email, 'reset', dto.emailVerifyTicket)
+
+    const user = await this.userService.findByEmail(email)
+    if (!user || !user.isActive) {
+      throw new BadRequestException('该邮箱未关联可用账号')
+    }
+
+    const passwordHash = await PasswordUtil.hash(dto.password)
+    await this.userService.updatePasswordHash(user.id, passwordHash)
+
+    return this.toResetPasswordResponseDto()
   }
 
   async login(loginDto: LoginDto): Promise<LoginResponseDto> {
@@ -543,6 +630,26 @@ export class AuthService {
 
     const tokens = await this.issueTokens(user.id, user.username)
 
+    return this.toLoginResponseDto(tokens, user)
+  }
+
+  async emailLogin(dto: EmailLoginDto): Promise<LoginResponseDto> {
+    const email = this.normalizeEmail(dto.email)
+
+    await this.consumeEmailVerifyTicket(email, 'login', dto.emailVerifyTicket)
+
+    const user = await this.userService.findByEmail(email)
+    if (!user) {
+      throw new UnauthorizedException('账号不存在或已失效')
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('账号不可用，请联系管理员')
+    }
+
+    await this.userService.updateLastLogin(user.id)
+
+    const tokens = await this.issueTokens(user.id, user.username)
     return this.toLoginResponseDto(tokens, user)
   }
 }
