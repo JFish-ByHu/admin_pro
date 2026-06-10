@@ -62,6 +62,10 @@ service.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     startRequestProgress()
 
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+    }
+
     // 携带 Access Token
     const userStore = useUserStore()
     if (userStore.accessToken) {

@@ -1,15 +1,50 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { UserInfo } from '@/types/user'
 
-defineProps<{
+const props = defineProps<{
   row: UserInfo
 }>()
+
+const avatarSrc = computed(() => {
+  const avatarUrl = props.row.avatarUrl
+
+  if (!avatarUrl) {
+    return ''
+  }
+  const normalized = avatarUrl.trim()
+
+  if (!normalized) {
+    return ''
+  }
+  if (normalized.startsWith('//')) {
+    return `${window.location.protocol}${normalized}`
+  }
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized
+  }
+  if (normalized.startsWith('/')) {
+    return normalized
+  }
+
+  return `/${normalized}`
+})
+
+const avatarFallbackText = computed(() => {
+  const candidate = props.row.username?.trim() || props.row.nickname?.trim() || '?'
+  return candidate.slice(0, 1).toUpperCase()
+})
 </script>
 
 <template>
   <div class="user-cell">
-    <el-avatar :size="34" class="user-avatar">
-      {{ row.nickname.charAt(0) }}
+    <el-avatar
+      :size="34"
+      :src="avatarSrc"
+      class="user-avatar"
+      :style="{ backgroundColor: avatarSrc ? 'var(--bg-page-light)' : 'var(--c-info)' }"
+    >
+      {{ avatarFallbackText }}
     </el-avatar>
     <div class="user-info">
       <span class="user-name">{{ row.nickname }}</span>
@@ -26,7 +61,6 @@ defineProps<{
 
   .user-avatar {
     flex-shrink: 0;
-    background-color: var(--c-info);
   }
 
   .user-info {

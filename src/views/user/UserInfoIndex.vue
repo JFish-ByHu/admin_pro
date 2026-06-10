@@ -9,10 +9,24 @@ import CommonTable, {
 import CommonTableToolbar, {
   type CommonTableToolbarAction
 } from '@/components/common/CommonTableToolbar.vue'
-import { addUser, batchDeleteUsers, deleteUserById, updateUser as updateUserApi } from '@/api/user'
-import type { UserCreateParams, UserFormModel, UserInfo, UserStatus, UserView } from '@/types/user'
+import {
+  addUser,
+  batchDeleteUsers,
+  deleteUserById,
+  updateUser as updateUserApi,
+  updateUserWithFormData
+} from '@/api/user'
+import type {
+  UserCreateParams,
+  UserFormModel,
+  UserFormSubmitPayload,
+  UserInfo,
+  UserStatus,
+  UserView
+} from '@/types/user'
 import { USER_PERMISSION_CODES } from '@/constants/permission'
 import { Message } from '@/utils/message'
+import { useUserStore } from '@/stores/user'
 import { useContentRefresh } from '@/composables/useContentRefresh'
 import { useUserPermissions } from './composables/useUserPermissions'
 import { useUserListQuery } from './composables/useUserListQuery'
@@ -49,6 +63,8 @@ const dialogVisible = ref(false)
 const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingUserId = ref('')
+const userStore = useUserStore()
+const submitPayload = ref<UserFormSubmitPayload | null>(null)
 
 const {
   canCreateUser,
@@ -169,18 +185,46 @@ const submitUserDialog = async () => {
       await addUser(buildCreatePayload())
       Message.success('用户创建成功')
     } else {
-      await updateUserApi(editingUserId.value, {
-        email: formModel.value.email.trim(),
-        password: formModel.value.password || undefined,
-        nickname: formModel.value.nickname.trim(),
-        avatarUrl: formModel.value.avatarUrl.trim() || undefined,
-        role: formModel.value.role,
-        isActive: formModel.value.status === 'enabled'
-      })
+      const payload = submitPayload.value
+      if (!payload) {
+        Message.error('提交数据缺失，请重试')
+        return
+      }
+
+      const requestData = new FormData()
+      requestData.append('email', payload.email.trim())
+      requestData.append('nickname', payload.nickname.trim())
+      requestData.append('role', payload.role)
+      requestData.append('isActive', String(payload.status === 'enabled'))
+
+      if (payload.password) {
+        requestData.append('password', payload.password)
+      }
+
+      if (payload.avatarFile) {
+        requestData.append('avatar', payload.avatarFile)
+      } else if (payload.removeAvatar) {
+        requestData.append('avatarUrl', '')
+      }
+
+      const updatedUser = await updateUserWithFormData(editingUserId.value, requestData)
+
+      if (userStore.userInfo?.id === updatedUser.id) {
+        userStore.setUserInfo({
+          ...userStore.userInfo,
+          email: updatedUser.email,
+          nickname: updatedUser.nickname || undefined,
+          avatarUrl: updatedUser.avatarUrl || undefined,
+          role: updatedUser.role,
+          permissions: userStore.userInfo.permissions || []
+        })
+      }
+
       Message.success('用户更新成功')
     }
 
     closeUserDialog()
+    submitPayload.value = null
     selectedRowKeys.value = []
     await getUsers()
   } finally {
@@ -188,8 +232,9 @@ const submitUserDialog = async () => {
   }
 }
 
-const onDialogSubmit = async (payload: UserFormModel) => {
+const onDialogSubmit = async (payload: UserFormSubmitPayload) => {
   formModel.value = payload
+  submitPayload.value = payload
   await submitUserDialog()
 }
 

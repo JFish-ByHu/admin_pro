@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { FormInstance, FormRules, UploadInstance, UploadProps } from 'element-plus'
-import type { UserFormModel, UserRole, UserStatus } from '@/types/user'
+import type { UserFormModel, UserFormSubmitPayload, UserRole, UserStatus } from '@/types/user'
 import { Message } from '@/utils/message'
 
 interface Option<T> {
@@ -22,12 +22,14 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
-  submit: [value: UserFormModel]
+  submit: [value: UserFormSubmitPayload]
 }>()
 
 const formRef = ref<FormInstance>()
 const uploadRef = ref<UploadInstance>()
 const localFormModel = ref<UserFormModel>(createInitialFormModel())
+const selectedAvatarFile = ref<File | null>(null)
+const avatarPreviewUrl = ref('')
 
 const localVisible = computed({
   get: () => props.visible,
@@ -81,11 +83,18 @@ function createInitialFormModel(): UserFormModel {
 }
 
 function resetFormModel(): void {
+  if (avatarPreviewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
+  }
+
   localFormModel.value = {
     ...createInitialFormModel(),
     ...props.initialValue,
     avatarUrl: props.initialValue.avatarUrl || ''
   }
+
+  selectedAvatarFile.value = null
+  avatarPreviewUrl.value = localFormModel.value.avatarUrl
 }
 
 const syncAvatarPreviewFromUpload: UploadProps['onChange'] = uploadFile => {
@@ -110,19 +119,23 @@ const syncAvatarPreviewFromUpload: UploadProps['onChange'] = uploadFile => {
     return
   }
 
-  const fileReader = new FileReader()
-  fileReader.onload = event => {
-    localFormModel.value.avatarUrl = String(event.target?.result || '')
-    uploadRef.value?.clearFiles()
+  if (avatarPreviewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
   }
-  fileReader.onerror = () => {
-    Message.warning('图片读取失败，请重新选择')
-    uploadRef.value?.clearFiles()
-  }
-  fileReader.readAsDataURL(rawFile)
+
+  selectedAvatarFile.value = rawFile
+  avatarPreviewUrl.value = URL.createObjectURL(rawFile)
+  localFormModel.value.avatarUrl = avatarPreviewUrl.value
+  uploadRef.value?.clearFiles()
 }
 
 const clearAvatar = (): void => {
+  if (avatarPreviewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(avatarPreviewUrl.value)
+  }
+
+  selectedAvatarFile.value = null
+  avatarPreviewUrl.value = ''
   localFormModel.value.avatarUrl = ''
   uploadRef.value?.clearFiles()
 }
@@ -142,7 +155,9 @@ const submitDialog = async (): Promise<void> => {
     username: localFormModel.value.username.trim(),
     email: localFormModel.value.email.trim(),
     nickname: localFormModel.value.nickname.trim(),
-    avatarUrl: localFormModel.value.avatarUrl.trim()
+    avatarUrl: localFormModel.value.avatarUrl.trim(),
+    avatarFile: selectedAvatarFile.value,
+    removeAvatar: !selectedAvatarFile.value && !localFormModel.value.avatarUrl.trim()
   })
 }
 
@@ -158,6 +173,19 @@ watch(
     formRef.value?.clearValidate()
   },
   { immediate: true }
+)
+
+watch(
+  () => localVisible.value,
+  visible => {
+    if (visible) {
+      return
+    }
+
+    if (avatarPreviewUrl.value.startsWith('blob:')) {
+      URL.revokeObjectURL(avatarPreviewUrl.value)
+    }
+  }
 )
 </script>
 
@@ -246,9 +274,9 @@ watch(
             :on-change="syncAvatarPreviewFromUpload"
           >
             <el-image
-              v-if="localFormModel.avatarUrl"
-              :src="localFormModel.avatarUrl"
-              :preview-src-list="[localFormModel.avatarUrl]"
+              v-if="avatarPreviewUrl"
+              :src="avatarPreviewUrl"
+              :preview-src-list="[avatarPreviewUrl]"
               fit="cover"
               class="avatar-uploader__preview"
               preview-teleported
@@ -262,17 +290,10 @@ watch(
           </el-upload>
 
           <el-space class="avatar-panel__actions">
-            <el-button
-              text
-              type="primary"
-              :disabled="!localFormModel.avatarUrl"
-              @click="clearAvatar"
-            >
+            <el-button text type="primary" :disabled="!avatarPreviewUrl" @click="clearAvatar">
               移除头像
             </el-button>
-            <span v-if="localFormModel.avatarUrl" class="avatar-panel__preview-text"
-              >点击可预览</span
-            >
+            <span v-if="avatarPreviewUrl" class="avatar-panel__preview-text">点击可预览</span>
           </el-space>
         </section>
       </div>

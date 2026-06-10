@@ -11,7 +11,41 @@ const appStore = useAppStore()
 
 const userInfo = computed(() => userStore.userInfo)
 const currentRouteTitle = computed(() => (route.meta.title as string) || '控制台')
-const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+
+const avatarSrc = computed(() => {
+  const avatarUrl = userInfo.value?.avatarUrl
+
+  if (!avatarUrl) {
+    return ''
+  }
+
+  const normalized = avatarUrl.trim()
+
+  if (!normalized) {
+    return ''
+  }
+
+  if (normalized.startsWith('//')) {
+    return `${window.location.protocol}${normalized}`
+  }
+
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+    return normalized
+  }
+
+  if (normalized.startsWith('/')) {
+    return normalized
+  }
+
+  return `/${normalized}`
+})
+
+const avatarFallbackText = computed(() => {
+  const candidate =
+    userInfo.value?.username?.trim() || userInfo.value?.nickname?.trim() || 'A'
+
+  return candidate.slice(0, 1).toUpperCase()
+})
 
 const refreshContent = async (event: MouseEvent) => {
   if (event.ctrlKey) {
@@ -115,7 +149,13 @@ const runUserMenuCommand = (command: string) => {
       <!-- 用户信息下拉菜单 -->
       <el-dropdown trigger="click" @command="runUserMenuCommand">
         <div class="user-profile">
-          <el-avatar :size="32" :src="userInfo?.avatarUrl || defaultAvatar" />
+          <el-avatar
+            :style="{ backgroundColor: avatarSrc ? 'var(--bg-page-light)' : 'var(--c-info)' }"
+            :size="32"
+            :src="avatarSrc"
+          >
+            {{ avatarFallbackText }}
+          </el-avatar>
           <span class="username">{{ userInfo?.nickname || userInfo?.username || 'Admin' }}</span>
           <el-icon><i-ep-arrow-down /></el-icon>
         </div>

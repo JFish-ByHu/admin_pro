@@ -65,6 +65,11 @@ export interface UserUpdateParams {
   isActive?: boolean
 }
 
+export interface UserFormSubmitPayload extends UserFormModel {
+  avatarFile?: File | null
+  removeAvatar?: boolean
+}
+
 export interface UserFormModel {
   username: string
   email: string

@@ -38,6 +38,14 @@ export const updateUser = (id: string, data: UserUpdateParams): Promise<UserView
   })
 }
 
+export const updateUserWithFormData = (id: string, data: FormData): Promise<UserView> => {
+  return request({
+    url: `/users/update/${id}`,
+    method: 'patch',
+    data
+  })
+}
+
 export const deleteUserById = (id: string): Promise<null> => {
   return request({
     url: `/users/delete/${id}`,
