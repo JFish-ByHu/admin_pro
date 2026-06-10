@@ -11,6 +11,7 @@ import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
 import { PasswordUtil } from '../../common/utils/password.util'
+import { resolvePublicAssetUrl } from '../../common/utils/asset-url.util'
 import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
 
 @Injectable()
@@ -29,7 +30,7 @@ export class UserService {
       username: result.username,
       email: result.email,
       nickname: result.nickname,
-      avatarUrl: result.avatarUrl,
+      avatarUrl: resolvePublicAssetUrl(result.avatarUrl),
       role: result.role,
       isActive: result.isActive,
       createTime: result.createTime,
@@ -206,9 +207,13 @@ export class UserService {
       throw new NotFoundException(`用户 ${id} 不存在`)
     }
 
+    const normalizedEmail = dto.email?.trim()
+    const normalizedNickname = dto.nickname?.trim()
+    const normalizedAvatarUrl = dto.avatarUrl?.trim()
+
     // 邮箱唯一性校验（排除自身）
-    if (dto.email && dto.email !== user.email) {
-      const emailOwner = await this.userRepository.findOne({ where: { email: dto.email } })
+    if (normalizedEmail && normalizedEmail !== user.email) {
+      const emailOwner = await this.userRepository.findOne({ where: { email: normalizedEmail } })
       if (emailOwner) {
         throw new ConflictException('邮箱已被其他用户使用')
       }
@@ -217,9 +222,11 @@ export class UserService {
     if (dto.password) {
       user.passwordHash = await PasswordUtil.hash(dto.password)
     }
-    if (dto.email !== undefined) user.email = dto.email
-    if (dto.nickname !== undefined) user.nickname = dto.nickname
-    if (dto.avatarUrl !== undefined) user.avatarUrl = dto.avatarUrl
+    if (normalizedEmail !== undefined) user.email = normalizedEmail
+    if (normalizedNickname !== undefined) user.nickname = normalizedNickname
+    if (normalizedAvatarUrl !== undefined) {
+      user.avatarUrl = normalizedAvatarUrl || null
+    }
     if (dto.role !== undefined) user.role = dto.role
     if (dto.isActive !== undefined) user.isActive = dto.isActive
 

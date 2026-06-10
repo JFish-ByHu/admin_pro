@@ -21,6 +21,7 @@ import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
 import { CheckResetEmailDto } from './dto/check-reset-email.dto'
 import { ResetPasswordDto } from './dto/reset-password.dto'
 import { getRequiredEnv } from '../../common/config/env'
+import { resolvePublicAssetUrl } from '../../common/utils/asset-url.util'
 import { PasswordUtil } from '../../common/utils/password.util'
 import { EmailVerification } from './entities/email-verification.entity'
 import { MailService } from './mail.service'
@@ -444,7 +445,7 @@ export class AuthService {
       username: user.username,
       email: user.email,
       nickname: user.nickname,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: resolvePublicAssetUrl(user.avatarUrl),
       role: user.getDisplayRole(),
       permissions: user.getPermissionCodes()
     }

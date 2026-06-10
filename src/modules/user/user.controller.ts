@@ -8,9 +8,18 @@ import {
   Param,
   Query,
   UseGuards,
-  ParseUUIDPipe
+  ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  ValidationPipe,
+  UsePipes,
+  BadRequestException
 } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { randomUUID } from 'crypto'
+import { extname, join } from 'path'
+import { mkdir, unlink, writeFile } from 'fs/promises'
 import { UserService } from './user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
@@ -20,6 +29,45 @@ import { success } from '../../common/response/api-response'
 import type { ApiSuccessBody } from '../../common/response/api-response'
 import { RequirePermissions } from '../../common/decorators/permissions.decorator'
 import { PermissionsGuard } from '../../common/guards/permissions.guard'
+
+const UPLOAD_ROOT_DIR = process.env.UPLOAD_ROOT_DIR || 'upload'
+const UPLOAD_AVATAR_DIR = process.env.UPLOAD_AVATAR_DIR || 'avatars'
+const UPLOAD_STATIC_PREFIX = process.env.UPLOAD_STATIC_PREFIX || '/api/upload'
+const AVATAR_UPLOAD_DIR = join(process.cwd(), UPLOAD_ROOT_DIR, UPLOAD_AVATAR_DIR)
+const UPLOAD_STATIC_PREFIX_WITH_SLASH = UPLOAD_STATIC_PREFIX.endsWith('/')
+  ? UPLOAD_STATIC_PREFIX
+  : `${UPLOAD_STATIC_PREFIX}/`
+const UPLOAD_AVATAR_WEB_PREFIX = `${UPLOAD_STATIC_PREFIX_WITH_SLASH}${UPLOAD_AVATAR_DIR}`
+const AVATAR_MIME_WHITELIST = ['image/jpeg', 'image/png', 'image/webp']
+const AVATAR_MAX_SIZE = Number(process.env.UPLOAD_AVATAR_MAX_SIZE || 2 * 1024 * 1024)
+
+const AVATAR_EXTENSION_MAP: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp'
+}
+
+type UploadedAvatarFile = {
+  originalname: string
+  mimetype: string
+  size: number
+  buffer: Buffer
+}
+
+const normalizeAvatarPathForStorage = (avatarUrl: string): string | null => {
+  const normalized = avatarUrl.trim()
+
+  if (!normalized.startsWith(UPLOAD_STATIC_PREFIX_WITH_SLASH)) {
+    return null
+  }
+
+  return normalized.replace(UPLOAD_STATIC_PREFIX_WITH_SLASH, '')
+}
+
+const buildAvatarFilename = (file: UploadedAvatarFile): string => {
+  const extension = AVATAR_EXTENSION_MAP[file.mimetype] || extname(file.originalname) || '.jpg'
+  return `${randomUUID()}${extension.toLowerCase()}`
+}
 
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
@@ -54,6 +102,13 @@ export class UserController {
    */
   @Post('add')
   @RequirePermissions('system:user:create')
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: false
+    })
+  )
   async add(@Body() dto: CreateUserDto): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.createUser(dto)
     return success(user, '用户创建成功')
@@ -65,12 +120,78 @@ export class UserController {
    */
   @Patch('update/:id')
   @RequirePermissions('system:user:update')
+  @UseInterceptors(
+    FileInterceptor('avatar', {
+      limits: { fileSize: AVATAR_MAX_SIZE }
+    })
+  )
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: false
+    })
+  )
   async update(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateUserDto
+    @Body() dto: UpdateUserDto,
+    @UploadedFile() avatar?: UploadedAvatarFile
   ): Promise<ApiSuccessBody<UserResponseDto>> {
-    const user = await this.userService.updateUser(id, dto)
-    return success(user, '用户更新成功')
+    if (avatar && !AVATAR_MIME_WHITELIST.includes(avatar.mimetype)) {
+      throw new BadRequestException('头像仅支持 jpg/png/webp 格式')
+    }
+
+    let newAvatarAbsolutePath = ''
+    let nextAvatarUrl: string | undefined
+
+    if (avatar) {
+      const filename = buildAvatarFilename(avatar)
+      nextAvatarUrl = `${UPLOAD_AVATAR_WEB_PREFIX}/${filename}`
+      newAvatarAbsolutePath = join(AVATAR_UPLOAD_DIR, filename)
+
+      await mkdir(AVATAR_UPLOAD_DIR, { recursive: true })
+      await writeFile(newAvatarAbsolutePath, avatar.buffer)
+    }
+
+    const currentUser = await this.userService.findById(id)
+    if (!currentUser) {
+      if (newAvatarAbsolutePath) {
+        await unlink(newAvatarAbsolutePath).catch(() => undefined)
+      }
+      throw new BadRequestException('用户不存在')
+    }
+
+    const existingAvatarUrl = currentUser.avatarUrl
+    const shouldRemoveAvatar = !avatar && dto.avatarUrl === ''
+
+    try {
+      const user = await this.userService.updateUser(id, {
+        ...dto,
+        avatarUrl: nextAvatarUrl ?? (shouldRemoveAvatar ? '' : dto.avatarUrl)
+      })
+
+      if (avatar && existingAvatarUrl && existingAvatarUrl !== user.avatarUrl) {
+        const relativePath = normalizeAvatarPathForStorage(existingAvatarUrl)
+        if (relativePath) {
+          void unlink(join(process.cwd(), UPLOAD_ROOT_DIR, relativePath)).catch(() => undefined)
+        }
+      }
+
+      if (shouldRemoveAvatar && existingAvatarUrl) {
+        const relativePath = normalizeAvatarPathForStorage(existingAvatarUrl)
+        if (relativePath) {
+          void unlink(join(process.cwd(), UPLOAD_ROOT_DIR, relativePath)).catch(() => undefined)
+        }
+      }
+
+      return success(user, '用户更新成功')
+    } catch (error) {
+      if (newAvatarAbsolutePath) {
+        await unlink(newAvatarAbsolutePath).catch(() => undefined)
+      }
+
+      throw error
+    }
   }
 
   /**

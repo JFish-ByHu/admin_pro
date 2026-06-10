@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
+import { join } from 'path'
+import type { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
@@ -8,14 +10,26 @@ import { getRequiredEnv } from './common/config/env'
 async function bootstrap() {
   getRequiredEnv('JWT_ACCESS_SECRET')
   getRequiredEnv('JWT_REFRESH_SECRET')
+  getRequiredEnv('UPLOAD_PUBLIC_BASE_URL')
 
-  const app = await NestFactory.create(AppModule)
+  const uploadRootDir = process.env.UPLOAD_ROOT_DIR || 'upload'
+  const uploadStaticPrefix = process.env.UPLOAD_STATIC_PREFIX || '/api/upload'
+  const uploadStaticPrefixWithSlash = uploadStaticPrefix.endsWith('/')
+    ? uploadStaticPrefix
+    : `${uploadStaticPrefix}/`
+
+  const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
   // 设置全局路由前缀（最佳实践）
   app.setGlobalPrefix('api')
 
   // 开启 CORS 允许前端跨域请求
   app.enableCors()
+
+  // 挂载本地上传目录为静态资源访问路径
+  app.useStaticAssets(join(process.cwd(), uploadRootDir), {
+    prefix: uploadStaticPrefixWithSlash
+  })
 
   // 注册全局响应拦截器
   app.useGlobalInterceptors(new TransformInterceptor())
