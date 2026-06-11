@@ -11,6 +11,7 @@ import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
 import { PasswordUtil } from '../../common/utils/password.util'
+import { formatDateTime } from '../../common/utils/date-time.util'
 import { resolvePublicAssetUrl } from '../../common/utils/asset-url.util'
 import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
 
@@ -33,9 +34,9 @@ export class UserService {
       avatarUrl: resolvePublicAssetUrl(result.avatarUrl),
       role: result.role,
       isActive: result.isActive,
-      createTime: result.createTime,
-      updateTime: result.updateTime,
-      lastLoginAt: result.lastLoginAt
+      createTime: formatDateTime(result.createTime),
+      updateTime: formatDateTime(result.updateTime),
+      lastLoginAt: result.lastLoginAt ? formatDateTime(result.lastLoginAt) : null
     }
   }
 

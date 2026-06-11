@@ -3,7 +3,8 @@ import {
   BadRequestException,
   UnauthorizedException,
   Inject,
-  InternalServerErrorException
+  InternalServerErrorException,
+  Logger
 } from '@nestjs/common'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import type { Cache } from 'cache-manager'
@@ -62,6 +63,8 @@ const EMAIL_VERIFY_TICKET_TTL_MS = 10 * 60 * 1000
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
@@ -351,6 +354,7 @@ export class AuthService {
     }
 
     const code = this.generateEmailCode()
+    this.logger.log(`发送验证码 ${code} 到 ${email} (场景: ${scene})`)
 
     try {
       await this.mailService.sendEmailCode(

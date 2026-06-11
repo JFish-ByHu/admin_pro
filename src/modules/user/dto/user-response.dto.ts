@@ -6,9 +6,9 @@ export class UserResponseDto {
   avatarUrl!: string | null
   role!: string
   isActive!: boolean
-  createTime!: Date
-  updateTime!: Date
-  lastLoginAt!: Date | null
+  createTime!: string
+  updateTime!: string
+  lastLoginAt!: string | null
 }
 
 export class UserListResponseDto {
