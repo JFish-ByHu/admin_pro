@@ -12,6 +12,9 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppMain: typeof import('./src/components/layout/components/AppMain.vue')['default']
+    CommonGrantSubjectList: typeof import('./src/components/common/CommonGrantSubjectList.vue')['default']
+    CommonGrantTreeCard: typeof import('./src/components/common/CommonGrantTreeCard.vue')['default']
+    CommonStatusTag: typeof import('./src/components/common/CommonStatusTag.vue')['default']
     CommonTable: typeof import('./src/components/common/CommonTable.vue')['default']
     CommonTableActionCell: typeof import('./src/components/common/CommonTableActionCell.vue')['default']
     CommonTableFilter: typeof import('./src/components/common/CommonTableFilter.vue')['default']
@@ -58,8 +61,11 @@ declare module 'vue' {
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
+    ElTabPane: typeof import('element-plus/es')['ElTabPane']
+    ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    ElTree: typeof import('element-plus/es')['ElTree']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     IEpArrowDown: typeof import('~icons/ep/arrow-down')['default']
     IEpBottomLeft: typeof import('~icons/ep/bottom-left')['default']

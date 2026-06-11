@@ -153,3 +153,14 @@
   background-color: var(--c-info) !important;
   border-color: var(--c-info) !important;
 }
+
+/** 覆盖 el-tabs 的样式 */
+.el-tabs__item.is-active {
+  color: var(--c-primary) !important;
+}
+.el-tabs__item:hover {
+  color: var(--c-primary-hover) !important;
+}
+.el-tabs__active-bar {
+  background-color: var(--c-primary) !important;
+}

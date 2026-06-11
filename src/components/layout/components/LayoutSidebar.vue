@@ -63,12 +63,12 @@ const selectMenu = () => {
             <el-icon><i-ep-setting /></el-icon>
             <span>系统管理</span>
           </template>
-          <el-menu-item index="/system/role">
-            <el-icon><i-ep-lock /></el-icon>
-            <template #title>角色管理</template>
+          <el-menu-item index="/system/menu">
+            <el-icon><i-ep-menu /></el-icon>
+            <template #title>菜单管理</template>
           </el-menu-item>
           <el-menu-item index="/system/permission">
-            <el-icon><i-ep-menu /></el-icon>
+            <el-icon><i-ep-lock /></el-icon>
             <template #title>权限管理</template>
           </el-menu-item>
         </el-sub-menu>

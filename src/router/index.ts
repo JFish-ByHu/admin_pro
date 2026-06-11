@@ -25,6 +25,22 @@ const router = createRouter({
           meta: {
             title: '用户信息'
           }
+        },
+        {
+          path: 'system/menu',
+          name: 'SystemMenu',
+          component: () => import('@/views/system/menu/MenuManagementIndex.vue'),
+          meta: {
+            title: '菜单管理'
+          }
+        },
+        {
+          path: 'system/permission',
+          name: 'SystemPermission',
+          component: () => import('@/views/system/permission/PermissionManagementIndex.vue'),
+          meta: {
+            title: '权限管理'
+          }
         }
       ]
     },

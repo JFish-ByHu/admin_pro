@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, h, ref, onMounted } from 'vue'
 import { CirclePlus, Delete } from '@element-plus/icons-vue'
+import { ElTag } from 'element-plus'
 import CommonTableFilter from '@/components/common/CommonTableFilter.vue'
 import CommonTable, {
   type CommonTableColumn,
@@ -30,13 +31,7 @@ import { useUserStore } from '@/stores/user'
 import { useContentRefresh } from '@/composables/useContentRefresh'
 import { useUserPermissions } from './composables/useUserPermissions'
 import { useUserListQuery } from './composables/useUserListQuery'
-import {
-  UserActionCell,
-  UserFormDialog,
-  UserIdentityCell,
-  UserRoleTag,
-  UserStatusTag
-} from './CompsExport'
+import { UserActionCell, UserFormDialog, UserIdentityCell } from './CompsExport'
 
 // 角色选项
 const roleOptions: { label: string; value: UserFormModel['role'] }[] = [
@@ -385,6 +380,18 @@ const toolbarSummaryText = computed(() => {
 
 const toUserRow = (rowData: Record<string, unknown>) => rowData as unknown as UserInfo
 
+const roleTagTypeMap = {
+  super: 'danger',
+  admin: 'warning',
+  operator: 'success',
+  user: 'info'
+} as const
+
+const statusTagConfigMap = {
+  enabled: { label: '启用', type: 'success' },
+  disabled: { label: '禁用', type: 'info' }
+} as const
+
 const baseColumns: CommonTableColumn[] = [
   {
     key: 'index',
@@ -408,7 +415,11 @@ const baseColumns: CommonTableColumn[] = [
     title: '角色',
     width: 130,
     align: 'center',
-    cellRenderer: ({ rowData }) => h(UserRoleTag, { role: toUserRow(rowData).role, roleLabelMap })
+    cellRenderer: ({ rowData }) => {
+      const role = toUserRow(rowData).role
+      const tagType = roleTagTypeMap[role as keyof typeof roleTagTypeMap] || 'info'
+      return h(ElTag, { type: tagType, effect: 'light' }, () => roleLabelMap[role] || role)
+    }
   },
   {
     key: 'status',
@@ -416,7 +427,10 @@ const baseColumns: CommonTableColumn[] = [
     title: '状态',
     width: 110,
     align: 'center',
-    cellRenderer: ({ rowData }) => h(UserStatusTag, { status: toUserRow(rowData).status })
+    cellRenderer: ({ rowData }) => {
+      const config = statusTagConfigMap[toUserRow(rowData).status]
+      return h(ElTag, { type: config.type, effect: 'light' }, () => config.label)
+    }
   },
   { key: 'createTime', dataKey: 'createTime', title: '创建时间', minWidth: 180 },
   {

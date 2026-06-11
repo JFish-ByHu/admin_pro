@@ -249,11 +249,12 @@ watch(
 
             <el-col :xs="24" :sm="12">
               <el-form-item label="状态" prop="status">
-                <el-segmented
+                <el-switch
                   v-model="localFormModel.status"
-                  :options="
-                    statusOptions.map(option => ({ label: option.label, value: option.value }))
-                  "
+                  active-value="enabled"
+                  inactive-value="disabled"
+                  active-text="启用"
+                  inactive-text="禁用"
                 />
               </el-form-item>
             </el-col>
@@ -290,7 +291,7 @@ watch(
           </el-upload>
 
           <el-space class="avatar-panel__actions">
-            <el-button text type="primary" :disabled="!avatarPreviewUrl" @click="clearAvatar">
+            <el-button text type="danger" :disabled="!avatarPreviewUrl" @click="clearAvatar">
               移除头像
             </el-button>
             <span v-if="avatarPreviewUrl" class="avatar-panel__preview-text">点击可预览</span>
@@ -303,7 +304,7 @@ watch(
       <el-button @click="closeDialog">取消</el-button>
       <el-button
         v-permission="submitPermission"
-        type="primary"
+        color="var(--c-info)"
         :loading="submitting"
         @click="submitDialog"
       >

@@ -41,8 +41,7 @@ const avatarSrc = computed(() => {
 })
 
 const avatarFallbackText = computed(() => {
-  const candidate =
-    userInfo.value?.username?.trim() || userInfo.value?.nickname?.trim() || 'A'
+  const candidate = userInfo.value?.username?.trim() || userInfo.value?.nickname?.trim() || 'A'
 
   return candidate.slice(0, 1).toUpperCase()
 })
