@@ -7,8 +7,6 @@ import CommonTable, { type CommonTableColumn } from '@/components/common/CommonT
 import CommonTableToolbar, {
   type CommonTableToolbarAction
 } from '@/components/common/CommonTableToolbar.vue'
-import CommonGrantSubjectList from '@/components/common/CommonGrantSubjectList.vue'
-import CommonGrantTreeCard from '@/components/common/CommonGrantTreeCard.vue'
 import {
   addPermissionResource,
   batchDeletePermissionResources,
@@ -19,6 +17,8 @@ import { PERMISSION_PERMISSION_CODES } from '@/constants/permission'
 import { useUserStore } from '@/stores/user'
 import { Message } from '@/utils/message'
 import { useContentRefresh } from '@/composables/useContentRefresh'
+import ResourceTreeNodeRow from '@/views/system/components/ResourceTreeNodeRow.vue'
+import SystemGrantPane from '@/views/system/components/SystemGrantPane.vue'
 import type {
   PermissionResourceFormModel,
   PermissionResourceNode,
@@ -511,54 +511,33 @@ useContentRefresh(() => refreshTabData())
       </el-tab-pane>
 
       <el-tab-pane label="权限授权" name="grant">
-        <div class="permission-pane">
-          <div class="permission-pane__left">
-            <CommonGrantSubjectList
-              :subjects="filteredSubjects"
-              :selected-id="selectedSubjectId"
-              :keyword="subjectKeyword"
-              title="授权角色"
-              placeholder="搜索角色名称 / 编码"
-              empty-text="暂无可授权角色"
-              :role-label-map="roleLabelMap"
-              @update:keyword="value => (subjectKeyword = value)"
-              @select="selectSubject"
+        <SystemGrantPane
+          v-model:subject-keyword="subjectKeyword"
+          v-model:checked-keys="checkedPermissionKeys"
+          :subjects="filteredSubjects"
+          :selected-subject-id="selectedSubjectId"
+          :role-label-map="roleLabelMap"
+          :tree-data="permissionTreeData"
+          :subject-name="selectedSubject?.nickname || selectedSubject?.username || ''"
+          :saving="saving"
+          tree-title="权限资源树"
+          summary-unit-text="项权限"
+          :grant-permission-code="PERMISSION_PERMISSION_CODES.GRANT"
+          @select="selectSubject"
+          @check-all="checkAllPermissions"
+          @clear-all="clearAllPermissions"
+          @reset="resetCurrentSubjectGrant"
+          @save="saveCurrentSubjectGrant"
+        >
+          <template #node="{ data }">
+            <ResourceTreeNodeRow
+              :name="(data as PermissionResourceNode).name"
+              :tag-label="permissionTypeTagConfigMap[(data as PermissionResourceNode).type].label"
+              :tag-type="permissionTypeTagConfigMap[(data as PermissionResourceNode).type].type"
+              :descriptor="(data as PermissionResourceNode).permissionCode"
             />
-          </div>
-
-          <div class="permission-pane__right">
-            <CommonGrantTreeCard
-              v-model:checked-keys="checkedPermissionKeys"
-              :tree-data="permissionTreeData"
-              :subject-name="selectedSubject?.nickname || selectedSubject?.username || ''"
-              :saving="saving"
-              title="权限资源树"
-              summary-unit-text="项权限"
-              :grant-permission-code="PERMISSION_PERMISSION_CODES.GRANT"
-              @check-all="checkAllPermissions"
-              @clear-all="clearAllPermissions"
-              @reset="resetCurrentSubjectGrant"
-              @save="saveCurrentSubjectGrant"
-            >
-              <template #node="{ data }">
-                <div class="permission-tree-card__node">
-                  <span class="permission-tree-card__node-name">{{
-                    (data as PermissionResourceNode).name
-                  }}</span>
-                  <el-tag
-                    :type="permissionTypeTagConfigMap[(data as PermissionResourceNode).type].type"
-                    effect="light"
-                  >
-                    {{ permissionTypeTagConfigMap[(data as PermissionResourceNode).type].label }}
-                  </el-tag>
-                  <span class="permission-tree-card__node-code">{{
-                    (data as PermissionResourceNode).permissionCode
-                  }}</span>
-                </div>
-              </template>
-            </CommonGrantTreeCard>
-          </div>
-        </div>
+          </template>
+        </SystemGrantPane>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -598,53 +577,6 @@ useContentRefresh(() => refreshTabData())
     min-height: 0;
     display: flex;
     flex-direction: column;
-  }
-}
-
-.permission-pane {
-  display: grid;
-  flex: 1;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  gap: var(--layout-gap);
-  height: 100%;
-  min-height: 0;
-
-  &__left,
-  &__right {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  @include respond-to(tablet-down) {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(280px, 36vh) minmax(0, 1fr);
-  }
-}
-
-.permission-tree-card {
-  &__node {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    width: 100%;
-    min-width: 0;
-    line-height: 1.4;
-  }
-
-  &__node-name {
-    color: var(--t-primary);
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  &__node-code {
-    color: var(--t-placeholder);
-    font-size: 12px;
-    white-space: normal;
-    word-break: break-all;
-    line-height: 1.35;
   }
 }
 </style>

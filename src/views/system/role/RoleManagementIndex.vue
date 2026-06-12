@@ -14,7 +14,7 @@ import { useUserStore } from '@/stores/user'
 import { useContentRefresh } from '@/composables/useContentRefresh'
 import type { RoleFormModel, RoleInfo, RoleStatus, RoleView } from '@/types/role'
 import { useRoleListQuery } from './composables/useRoleListQuery'
-import { RoleActionCell, RoleFormDialog, RoleUserGrantDialog } from './CompsExport'
+import { RoleActionCell, RoleFormDialog, RoleUserGrantDrawer } from './CompsExport'
 
 const selectedRowKeys = ref<Array<string | number>>([])
 const dialogVisible = ref(false)
@@ -485,7 +485,7 @@ useContentRefresh(() => refreshData())
       @submit="submitRoleDialog"
     />
 
-    <RoleUserGrantDialog
+    <RoleUserGrantDrawer
       v-model:visible="grantDialogVisible"
       :role="grantRole"
       :submit-permission="ROLE_PERMISSION_CODES.UPDATE"

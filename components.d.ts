@@ -68,6 +68,8 @@ declare module 'vue' {
     ElTree: typeof import('element-plus/es')['ElTree']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     IEpArrowDown: typeof import('~icons/ep/arrow-down')['default']
+    IEpArrowLeft: typeof import('~icons/ep/arrow-left')['default']
+    IEpArrowRight: typeof import('~icons/ep/arrow-right')['default']
     IEpBottomLeft: typeof import('~icons/ep/bottom-left')['default']
     IEpClose: typeof import('~icons/ep/close')['default']
     IEpDataAnalysis: typeof import('~icons/ep/data-analysis')['default']
