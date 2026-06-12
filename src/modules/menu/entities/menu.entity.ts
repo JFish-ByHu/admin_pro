@@ -28,6 +28,9 @@ export class Menu {
   @Column({ type: 'varchar', length: 255 })
   componentPath!: string
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  icon!: string | null
+
   @Column({ type: 'int', default: 0 })
   sort!: number
 

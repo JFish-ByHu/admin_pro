@@ -460,6 +460,7 @@ export class AuthService {
         type: menu.type,
         routePath: menu.routePath,
         componentPath: menu.componentPath,
+        icon: menu.icon,
         sort: menu.sort,
         children: []
       })
@@ -496,10 +497,10 @@ export class AuthService {
   }
 
   private async buildAuthorizedMenuTree(user: {
-    getMenuRoutePaths(): string[]
+    getGrantedMenuIds(): string[]
   }): Promise<AuthMenuTreeNodeDto[]> {
-    const grantedRoutePaths = new Set(user.getMenuRoutePaths())
-    if (grantedRoutePaths.size === 0) {
+    const grantedMenuIds = new Set(user.getGrantedMenuIds())
+    if (grantedMenuIds.size === 0) {
       return []
     }
 
@@ -510,7 +511,7 @@ export class AuthService {
 
     const menuById = new Map(allActiveMenus.map(menu => [menu.id, menu]))
     const includedIds = new Set(
-      allActiveMenus.filter(menu => grantedRoutePaths.has(menu.routePath)).map(menu => menu.id)
+      allActiveMenus.filter(menu => grantedMenuIds.has(menu.id)).map(menu => menu.id)
     )
 
     Array.from(includedIds).forEach(menuId => {
@@ -546,6 +547,7 @@ export class AuthService {
       getDisplayRole(): string
       getPermissionCodes(): string[]
       getMenuRoutePaths(): string[]
+      getGrantedMenuIds(): string[]
     },
     menuTree: AuthMenuTreeNodeDto[]
   ): AuthUserInfoDto {
@@ -573,6 +575,7 @@ export class AuthService {
       getDisplayRole(): string
       getPermissionCodes(): string[]
       getMenuRoutePaths(): string[]
+      getGrantedMenuIds(): string[]
     }
   ): Promise<LoginResponseDto> {
     const menuTree = await this.buildAuthorizedMenuTree(user)

@@ -39,11 +39,21 @@ export class MenuService {
       type: menu.type,
       routePath: menu.routePath,
       componentPath: menu.componentPath,
+      icon: menu.icon,
       sort: menu.sort,
       status: menu.isActive ? 'enabled' : 'disabled',
       createTime: formatDateTime(menu.createTime),
       updateTime: formatDateTime(menu.updateTime)
     }
+  }
+
+  private normalizeIcon(icon: unknown): string | null {
+    if (typeof icon !== 'string') {
+      return null
+    }
+
+    const trimmedIcon = icon.trim()
+    return trimmedIcon ? trimmedIcon : null
   }
 
   private async ensureMenuParentValid(
@@ -306,6 +316,7 @@ export class MenuService {
       type: dto.type,
       routePath: dto.routePath,
       componentPath: dto.componentPath,
+      icon: this.normalizeIcon(dto.icon),
       sort: dto.sort ?? 0,
       isActive: dto.isActive ?? true
     })
@@ -345,6 +356,7 @@ export class MenuService {
     if (dto.type !== undefined) menu.type = dto.type
     if (dto.routePath !== undefined) menu.routePath = dto.routePath
     if (dto.componentPath !== undefined) menu.componentPath = dto.componentPath
+    if (dto.icon !== undefined) menu.icon = this.normalizeIcon(dto.icon)
     if (dto.sort !== undefined) menu.sort = dto.sort
     if (dto.isActive !== undefined) menu.isActive = dto.isActive
 

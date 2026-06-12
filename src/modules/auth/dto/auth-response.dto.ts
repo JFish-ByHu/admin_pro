@@ -48,6 +48,7 @@ export class AuthMenuTreeNodeDto {
   type!: 'directory' | 'menu'
   routePath!: string
   componentPath!: string
+  icon!: string | null
   sort!: number
   children!: AuthMenuTreeNodeDto[]
 }

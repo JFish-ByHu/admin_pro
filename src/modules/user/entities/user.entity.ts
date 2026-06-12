@@ -40,9 +40,6 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   avatarUrl!: string | null
 
-  @Column({ type: 'varchar', length: 20, default: 'user' })
-  role!: string // 兼容字段：用于前端展示/简单筛选，非真实权限来源
-
   @ManyToMany(() => Role, role => role.users, {
     cascade: true
   })
@@ -66,7 +63,19 @@ export class User {
   lastLoginAt!: Date | null
 
   getDisplayRole(): string {
-    return this.role
+    const activeRoles = (this.roles || []).filter(r => r.isActive !== false)
+    if (!activeRoles.length) {
+      return 'user'
+    }
+
+    const priority = ['super', 'admin', 'operator', 'user']
+    for (const code of priority) {
+      if (activeRoles.some(r => r.code === code)) {
+        return code
+      }
+    }
+
+    return activeRoles[0]?.code || 'user'
   }
 
   getPermissionCodes(): string[] {
@@ -78,6 +87,18 @@ export class User {
             role =>
               role.permissions?.filter(item => item.isActive !== false).map(item => item.code) || []
           ) || []
+      )
+    )
+  }
+
+  getGrantedMenuIds(): string[] {
+    return Array.from(
+      new Set(
+        this.roles
+          ?.filter(role => role.isActive !== false)
+          .flatMap(role => {
+            return role.menus?.filter(menu => menu.isActive !== false).map(menu => menu.id) || []
+          }) || []
       )
     )
   }

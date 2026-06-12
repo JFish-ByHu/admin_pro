@@ -22,7 +22,7 @@ import { User } from './modules/user/entities/user.entity'
       ttl: 5 * 60 * 1000 // 缓存过期时间为 5 分钟 (毫秒)
     }),
     TypeOrmModule.forRoot({
-      type: 'sqljs', // 使用纯 JS 的 SQLite 驱动
+      type: 'sqljs',
       location: 'database.sqlite', // 数据库文件路径
       autoSave: true, // 开启自动保存到本地文件
       entities: [__dirname + '/**/*.entity{.ts,.js}'],

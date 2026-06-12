@@ -5,6 +5,7 @@ export class MenuResourceResponseDto {
   type!: 'directory' | 'menu'
   routePath!: string
   componentPath!: string
+  icon!: string | null
   sort!: number
   status!: 'enabled' | 'disabled'
   createTime!: string

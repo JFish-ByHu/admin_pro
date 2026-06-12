@@ -10,7 +10,6 @@ import { PERMISSION_DEFINITIONS } from '../rbac/permission-registry'
 @Injectable()
 export class RbacBootstrapService {
   private readonly logger = new Logger(RbacBootstrapService.name)
-  private readonly rolePriority: string[] = ['super', 'admin', 'operator', 'user']
 
   constructor(
     @InjectRepository(Role)
@@ -123,20 +122,6 @@ export class RbacBootstrapService {
     await this.ensureSuperRoleAllPermissions()
     await this.ensureSuperRoleAllMenus()
     await this.ensureUserRoleRelations()
-  }
-
-  private pickDisplayRoleCode(roles: Role[]): string {
-    if (!roles.length) {
-      return 'user'
-    }
-
-    for (const code of this.rolePriority) {
-      if (roles.some(role => role.code === code)) {
-        return code
-      }
-    }
-
-    return roles[0]?.code || 'user'
   }
 
   private async ensureBaseRoles(): Promise<void> {
@@ -344,28 +329,13 @@ export class RbacBootstrapService {
 
     const activeRoles = await this.roleRepository.find({ where: { isActive: true } })
     const roleByCode = new Map(activeRoles.map(role => [role.code, role]))
+    const defaultRole = roleByCode.get('user')
 
     let changedCount = 0
 
     for (const user of users) {
-      const currentRoles = user.roles || []
-
-      if (currentRoles.length === 0) {
-        const fallbackRole = roleByCode.get(user.role) || roleByCode.get('user')
-
-        if (fallbackRole) {
-          user.roles = [fallbackRole]
-          user.role = this.pickDisplayRoleCode(user.roles)
-          await this.userRepository.save(user)
-          changedCount += 1
-        }
-
-        continue
-      }
-
-      const nextDisplayRole = this.pickDisplayRoleCode(currentRoles)
-      if (user.role !== nextDisplayRole) {
-        user.role = nextDisplayRole
+      if ((user.roles || []).length === 0 && defaultRole) {
+        user.roles = [defaultRole]
         await this.userRepository.save(user)
         changedCount += 1
       }

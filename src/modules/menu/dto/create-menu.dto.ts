@@ -30,6 +30,11 @@ export class CreateMenuDto {
   componentPath!: string
 
   @IsOptional()
+  @IsString({ message: 'icon 必须是字符串' })
+  @MaxLength(50, { message: 'icon 最长 50 个字符' })
+  icon?: string
+
+  @IsOptional()
   @IsInt({ message: 'sort 必须是整数' })
   @Min(0, { message: 'sort 不能小于 0' })
   sort?: number

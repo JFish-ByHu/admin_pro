@@ -25,22 +25,6 @@ export class UserService {
     private readonly roleRepository: Repository<Role>
   ) {}
 
-  private readonly rolePriority: string[] = ['super', 'admin', 'operator', 'user']
-
-  private pickDisplayRoleCode(roles: Role[]): string {
-    if (!roles.length) {
-      return 'user'
-    }
-
-    for (const code of this.rolePriority) {
-      if (roles.some(role => role.code === code)) {
-        return code
-      }
-    }
-
-    return roles[0]?.code || 'user'
-  }
-
   private async ensureDefaultUserRole(): Promise<Role | null> {
     const role = await this.roleRepository.findOne({ where: { code: 'user', isActive: true } })
     return role || null
@@ -70,7 +54,7 @@ export class UserService {
       email: result.email,
       nickname: result.nickname,
       avatarUrl: resolvePublicAssetUrl(result.avatarUrl),
-      role: result.role,
+      role: user.getDisplayRole(),
       roleIds,
       isActive: result.isActive,
       createTime: formatDateTime(result.createTime),
@@ -144,7 +128,6 @@ export class UserService {
         'user.email',
         'user.nickname',
         'user.avatarUrl',
-        'user.role',
         'user.isActive',
         'user.createTime',
         'user.updateTime',
@@ -198,7 +181,6 @@ export class UserService {
         email: true,
         nickname: true,
         avatarUrl: true,
-        role: true,
         isActive: true,
         createTime: true,
         updateTime: true,
@@ -233,7 +215,6 @@ export class UserService {
       passwordHash,
       nickname: dto.nickname ?? dto.username,
       avatarUrl: dto.avatarUrl,
-      role: 'user',
       isActive: dto.isActive ?? true
     })
 
@@ -242,7 +223,6 @@ export class UserService {
     const defaultRole = await this.ensureDefaultUserRole()
     if (defaultRole) {
       saved.roles = [defaultRole]
-      saved.role = this.pickDisplayRoleCode(saved.roles)
       await this.userRepository.save(saved)
     }
 
@@ -330,7 +310,6 @@ export class UserService {
     }
 
     user.roles = roles
-    user.role = this.pickDisplayRoleCode(roles)
 
     const saved = await this.userRepository.save(user)
     return this.toUserResponseDto(saved)
@@ -383,8 +362,7 @@ export class UserService {
   // 内部调用：创建用户（供 AuthService 注册时使用，保持原有签名不变）
   async create(userData: Partial<User>): Promise<User> {
     const user = this.userRepository.create({
-      ...userData,
-      role: userData.role || 'user'
+      ...userData
     })
 
     const saved = await this.userRepository.save(user)
@@ -392,7 +370,6 @@ export class UserService {
     const defaultRole = await this.ensureDefaultUserRole()
     if (defaultRole) {
       saved.roles = [defaultRole]
-      saved.role = this.pickDisplayRoleCode(saved.roles)
       return this.userRepository.save(saved)
     }
 
