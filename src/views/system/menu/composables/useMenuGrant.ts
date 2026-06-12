@@ -1,54 +1,11 @@
 import { computed, ref, watch, type Ref } from 'vue'
+import { getRoleMenuGrantDetail, updateRoleMenuGrant } from '@/api/menu'
+import { getRoleSimpleList } from '@/api/role'
 import { Message } from '@/utils/message'
 import type { MenuAuthSubject, MenuResourceNode } from '@/types/menu'
 
 interface UseMenuGrantOptions {
   menuTreeData: Ref<MenuResourceNode[]>
-}
-
-const mockSubjects: MenuAuthSubject[] = [
-  {
-    id: 'u-super-admin',
-    username: 'super_admin',
-    nickname: '超级管理员',
-    email: 'super_admin@example.com',
-    role: 'super'
-  },
-  {
-    id: 'u-admin-01',
-    username: 'admin_ops',
-    nickname: '运营管理员',
-    email: 'admin_ops@example.com',
-    role: 'admin'
-  },
-  {
-    id: 'u-operator-01',
-    username: 'operator_a',
-    nickname: '业务运营A',
-    email: 'operator_a@example.com',
-    role: 'operator'
-  },
-  {
-    id: 'u-user-01',
-    username: 'user_demo',
-    nickname: '普通用户示例',
-    email: 'user_demo@example.com',
-    role: 'user'
-  }
-]
-
-const mockGrantMap: Record<string, string[]> = {
-  'u-super-admin': [
-    'm-dashboard',
-    'm-user-root',
-    'm-user-info',
-    'm-system-root',
-    'm-system-menu',
-    'm-system-permission'
-  ],
-  'u-admin-01': ['m-dashboard', 'm-user-root', 'm-user-info', 'm-system-root', 'm-system-menu'],
-  'u-operator-01': ['m-dashboard', 'm-user-root', 'm-user-info'],
-  'u-user-01': ['m-dashboard']
 }
 
 const collectAllNodeIds = (nodes: MenuResourceNode[], ids: string[] = []) => {
@@ -65,12 +22,18 @@ const collectAllNodeIds = (nodes: MenuResourceNode[], ids: string[] = []) => {
 
 export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
   const subjectKeyword = ref('')
-  const subjects = ref<MenuAuthSubject[]>(mockSubjects)
+  const subjects = ref<MenuAuthSubject[]>([])
   const selectedSubjectId = ref('')
   const checkedMenuKeys = ref<string[]>([])
+  const originalCheckedMenuKeys = ref<string[]>([])
   const saving = ref(false)
 
-  const grantMap = ref<Record<string, string[]>>({ ...mockGrantMap })
+  const roleLabelMap = computed(() => {
+    return subjects.value.reduce<Record<string, string>>((acc, item) => {
+      acc[item.role] = item.nickname
+      return acc
+    }, {})
+  })
 
   const filteredSubjects = computed(() => {
     const keyword = subjectKeyword.value.trim().toLowerCase()
@@ -94,15 +57,11 @@ export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
 
   const selectSubject = (subjectId: string) => {
     selectedSubjectId.value = subjectId
-    checkedMenuKeys.value = [...(grantMap.value[subjectId] || [])]
+    void loadGrantDetail(subjectId)
   }
 
   const resetCurrentSubjectGrant = () => {
-    if (!selectedSubjectId.value) {
-      return
-    }
-
-    checkedMenuKeys.value = [...(grantMap.value[selectedSubjectId.value] || [])]
+    checkedMenuKeys.value = [...originalCheckedMenuKeys.value]
   }
 
   const checkAllMenus = () => {
@@ -122,13 +81,57 @@ export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
     saving.value = true
 
     try {
-      grantMap.value[selectedSubjectId.value] = [...checkedMenuKeys.value]
+      await updateRoleMenuGrant({
+        roleId: selectedSubjectId.value,
+        menuIds: checkedMenuKeys.value
+      })
+
+      originalCheckedMenuKeys.value = [...checkedMenuKeys.value]
 
       const subjectName = selectedSubject.value?.nickname || selectedSubject.value?.username || ''
       Message.success(`已保存 ${subjectName} 的菜单授权`)
     } finally {
       saving.value = false
     }
+  }
+
+  const loadSubjects = async () => {
+    const roles = await getRoleSimpleList()
+
+    subjects.value = roles.map(item => ({
+      id: item.id,
+      username: item.code,
+      nickname: item.name,
+      email: '-',
+      role: item.code
+    }))
+  }
+
+  const loadGrantDetail = async (roleId: string) => {
+    const detail = await getRoleMenuGrantDetail(roleId)
+    checkedMenuKeys.value = detail.checkedMenuIds
+    originalCheckedMenuKeys.value = [...detail.checkedMenuIds]
+  }
+
+  const refreshSubjects = async () => {
+    await loadSubjects()
+
+    const firstSubject = subjects.value[0]
+    if (!firstSubject) {
+      selectedSubjectId.value = ''
+      checkedMenuKeys.value = []
+      originalCheckedMenuKeys.value = []
+      return
+    }
+
+    if (
+      !selectedSubjectId.value ||
+      !subjects.value.some(item => item.id === selectedSubjectId.value)
+    ) {
+      selectedSubjectId.value = firstSubject.id
+    }
+
+    await loadGrantDetail(selectedSubjectId.value)
   }
 
   watch(
@@ -148,7 +151,8 @@ export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
         const firstSubject = nextSubjects[0]
 
         if (firstSubject) {
-          selectSubject(firstSubject.id)
+          selectedSubjectId.value = firstSubject.id
+          void loadGrantDetail(firstSubject.id)
         }
       }
     },
@@ -159,6 +163,7 @@ export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
 
   return {
     filteredSubjects,
+    roleLabelMap,
     subjectKeyword,
     selectedSubjectId,
     selectedSubject,
@@ -169,6 +174,7 @@ export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
     checkAllMenus,
     clearAllMenus,
     saveCurrentSubjectGrant,
+    refreshSubjects,
     menuTreeData
   }
 }

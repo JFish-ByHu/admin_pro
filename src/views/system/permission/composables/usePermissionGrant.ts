@@ -1,63 +1,12 @@
 import { computed, ref, watch, type Ref } from 'vue'
+import { getRolePermissionGrantDetail, updateRolePermissionGrant } from '@/api/permission'
+import { getRoleSimpleList } from '@/api/role'
 import { Message } from '@/utils/message'
 import type { MenuAuthSubject } from '@/types/menu'
 import type { PermissionResourceNode } from '@/types/permission'
 
 interface UsePermissionGrantOptions {
   permissionTreeData: Ref<PermissionResourceNode[]>
-}
-
-const mockSubjects: MenuAuthSubject[] = [
-  {
-    id: 'u-super-admin',
-    username: 'super_admin',
-    nickname: '超级管理员',
-    email: 'super_admin@example.com',
-    role: 'super'
-  },
-  {
-    id: 'u-admin-01',
-    username: 'admin_ops',
-    nickname: '运营管理员',
-    email: 'admin_ops@example.com',
-    role: 'admin'
-  },
-  {
-    id: 'u-operator-01',
-    username: 'operator_a',
-    nickname: '业务运营A',
-    email: 'operator_a@example.com',
-    role: 'operator'
-  },
-  {
-    id: 'u-user-01',
-    username: 'user_demo',
-    nickname: '普通用户示例',
-    email: 'user_demo@example.com',
-    role: 'user'
-  }
-]
-
-const mockGrantMap: Record<string, string[]> = {
-  'u-super-admin': [
-    'p-user-module',
-    'p-user-create',
-    'p-user-update',
-    'p-user-delete',
-    'p-menu-module',
-    'p-menu-create',
-    'p-menu-update',
-    'p-menu-grant'
-  ],
-  'u-admin-01': [
-    'p-user-module',
-    'p-user-update',
-    'p-menu-module',
-    'p-menu-create',
-    'p-menu-update'
-  ],
-  'u-operator-01': ['p-user-module', 'p-menu-module'],
-  'u-user-01': []
 }
 
 const collectAllNodeIds = (nodes: PermissionResourceNode[], ids: string[] = []) => {
@@ -74,12 +23,18 @@ const collectAllNodeIds = (nodes: PermissionResourceNode[], ids: string[] = []) 
 
 export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOptions) => {
   const subjectKeyword = ref('')
-  const subjects = ref<MenuAuthSubject[]>(mockSubjects)
+  const subjects = ref<MenuAuthSubject[]>([])
   const selectedSubjectId = ref('')
   const checkedPermissionKeys = ref<string[]>([])
+  const originalCheckedPermissionKeys = ref<string[]>([])
   const saving = ref(false)
 
-  const grantMap = ref<Record<string, string[]>>({ ...mockGrantMap })
+  const roleLabelMap = computed(() => {
+    return subjects.value.reduce<Record<string, string>>((acc, item) => {
+      acc[item.role] = item.nickname
+      return acc
+    }, {})
+  })
 
   const filteredSubjects = computed(() => {
     const keyword = subjectKeyword.value.trim().toLowerCase()
@@ -103,15 +58,11 @@ export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOpt
 
   const selectSubject = (subjectId: string) => {
     selectedSubjectId.value = subjectId
-    checkedPermissionKeys.value = [...(grantMap.value[subjectId] || [])]
+    void loadGrantDetail(subjectId)
   }
 
   const resetCurrentSubjectGrant = () => {
-    if (!selectedSubjectId.value) {
-      return
-    }
-
-    checkedPermissionKeys.value = [...(grantMap.value[selectedSubjectId.value] || [])]
+    checkedPermissionKeys.value = [...originalCheckedPermissionKeys.value]
   }
 
   const checkAllPermissions = () => {
@@ -131,13 +82,57 @@ export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOpt
     saving.value = true
 
     try {
-      grantMap.value[selectedSubjectId.value] = [...checkedPermissionKeys.value]
+      await updateRolePermissionGrant({
+        roleId: selectedSubjectId.value,
+        permissionIds: checkedPermissionKeys.value
+      })
+
+      originalCheckedPermissionKeys.value = [...checkedPermissionKeys.value]
 
       const subjectName = selectedSubject.value?.nickname || selectedSubject.value?.username || ''
       Message.success(`已保存 ${subjectName} 的权限授权`)
     } finally {
       saving.value = false
     }
+  }
+
+  const loadSubjects = async () => {
+    const roles = await getRoleSimpleList()
+
+    subjects.value = roles.map(item => ({
+      id: item.id,
+      username: item.code,
+      nickname: item.name,
+      email: '-',
+      role: item.code
+    }))
+  }
+
+  const loadGrantDetail = async (roleId: string) => {
+    const detail = await getRolePermissionGrantDetail(roleId)
+    checkedPermissionKeys.value = detail.checkedPermissionIds
+    originalCheckedPermissionKeys.value = [...detail.checkedPermissionIds]
+  }
+
+  const refreshSubjects = async () => {
+    await loadSubjects()
+
+    const firstSubject = subjects.value[0]
+    if (!firstSubject) {
+      selectedSubjectId.value = ''
+      checkedPermissionKeys.value = []
+      originalCheckedPermissionKeys.value = []
+      return
+    }
+
+    if (
+      !selectedSubjectId.value ||
+      !subjects.value.some(item => item.id === selectedSubjectId.value)
+    ) {
+      selectedSubjectId.value = firstSubject.id
+    }
+
+    await loadGrantDetail(selectedSubjectId.value)
   }
 
   watch(
@@ -157,7 +152,8 @@ export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOpt
         const firstSubject = nextSubjects[0]
 
         if (firstSubject) {
-          selectSubject(firstSubject.id)
+          selectedSubjectId.value = firstSubject.id
+          void loadGrantDetail(firstSubject.id)
         }
       }
     },
@@ -168,6 +164,7 @@ export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOpt
 
   return {
     filteredSubjects,
+    roleLabelMap,
     subjectKeyword,
     selectedSubjectId,
     selectedSubject,
@@ -177,6 +174,7 @@ export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOpt
     resetCurrentSubjectGrant,
     checkAllPermissions,
     clearAllPermissions,
-    saveCurrentSubjectGrant
+    saveCurrentSubjectGrant,
+    refreshSubjects
   }
 }

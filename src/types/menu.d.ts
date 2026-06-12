@@ -11,7 +11,8 @@ export interface MenuResourceNode {
   componentPath: string
   status: MenuResourceStatus
   sort: number
-  updatedAt: string
+  createTime: string
+  updateTime: string
   children?: MenuResourceNode[]
 }
 
@@ -25,7 +26,8 @@ export interface MenuResourceTableItem {
   componentPath: string
   status: MenuResourceStatus
   sort: number
-  updatedAt: string
+  createTime: string
+  updateTime: string
 }
 
 export interface MenuResourceQuery {
@@ -34,10 +36,66 @@ export interface MenuResourceQuery {
   status: MenuResourceStatus | ''
 }
 
+export interface MenuResourceListParams {
+  keyword?: string
+  type?: MenuResourceType | ''
+  status?: MenuResourceStatus | ''
+  all?: boolean
+  page?: number
+  pageSize?: number
+}
+
+export interface MenuResourceListResult {
+  list: MenuResourceNode[]
+  total: number
+  page: number
+  pageSize: number
+}
+
 export interface MenuAuthSubject {
   id: string
   username: string
   nickname: string
   email: string
   role: string
+}
+
+export interface RoleMenuGrantDetailResult {
+  roleId: string
+  checkedMenuIds: string[]
+}
+
+export interface RoleMenuGrantUpdateParams {
+  roleId: string
+  menuIds: string[]
+}
+
+export interface MenuResourceCreateParams {
+  parentId?: string
+  name: string
+  type: MenuResourceType
+  routePath: string
+  componentPath: string
+  sort?: number
+  isActive?: boolean
+}
+
+export interface MenuResourceUpdateParams {
+  parentId?: string | null
+  name?: string
+  type?: MenuResourceType
+  routePath?: string
+  componentPath?: string
+  sort?: number
+  isActive?: boolean
+}
+
+export interface MenuResourceFormModel {
+  parentId: string
+  name: string
+  type: MenuResourceType
+  routePath: string
+  componentPath: string
+  sort: number
+  status: MenuResourceStatus
 }

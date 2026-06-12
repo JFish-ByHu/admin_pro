@@ -30,3 +30,13 @@ export const PERMISSION_PERMISSION_CODES = {
 
 export type PermissionPermissionCode =
   (typeof PERMISSION_PERMISSION_CODES)[keyof typeof PERMISSION_PERMISSION_CODES]
+
+export const ROLE_PERMISSION_CODES = {
+  LIST: 'system:role:list',
+  DETAIL: 'system:role:detail',
+  CREATE: 'system:role:create',
+  UPDATE: 'system:role:update',
+  DELETE: 'system:role:delete'
+} as const
+
+export type RolePermissionCode = (typeof ROLE_PERMISSION_CODES)[keyof typeof ROLE_PERMISSION_CODES]
