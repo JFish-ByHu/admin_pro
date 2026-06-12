@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch, type Component } from 'vue'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { MenuResourceFormModel } from '@/types/menu'
+import type { MenuResourceFormModel, MenuResourceType } from '@/types/menu'
 
 interface ParentOption {
   label: string
   value: string
+  type: MenuResourceType
 }
 
 const props = defineProps<{
@@ -25,11 +27,21 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInstance>()
 const localFormModel = ref<MenuResourceFormModel>(createInitialFormModel())
+const iconComponentMap = ElementPlusIconsVue as Record<string, Component>
+const iconOptions = computed(() => Object.keys(iconComponentMap).sort())
 
 const localVisible = computed({
   get: () => props.visible,
   set: value => emit('update:visible', value)
 })
+
+const selectedParentType = computed(() => {
+  return (
+    props.parentOptions.find(option => option.value === localFormModel.value.parentId)?.type || null
+  )
+})
+
+const forceMenuType = computed(() => selectedParentType.value === 'directory')
 
 const formRules: FormRules<MenuResourceFormModel> = {
   name: [
@@ -83,6 +95,7 @@ function createInitialFormModel(): MenuResourceFormModel {
     type: 'menu',
     routePath: '',
     componentPath: '',
+    icon: '',
     sort: 0,
     status: 'enabled'
   }
@@ -109,7 +122,8 @@ const submitDialog = async () => {
     ...localFormModel.value,
     name: localFormModel.value.name.trim(),
     routePath: localFormModel.value.routePath.trim(),
-    componentPath: localFormModel.value.componentPath.trim()
+    componentPath: localFormModel.value.componentPath.trim(),
+    icon: localFormModel.value.type === 'directory' ? localFormModel.value.icon.trim() : ''
   })
 }
 
@@ -128,18 +142,39 @@ watch(
 )
 
 watch(
-  () => localFormModel.value.type,
-  async value => {
-    if (value !== 'directory') {
+  () => forceMenuType.value,
+  async mustBeMenu => {
+    if (!mustBeMenu || localFormModel.value.type !== 'directory') {
       return
     }
 
-    if (localFormModel.value.componentPath) {
-      localFormModel.value.componentPath = ''
-    }
+    localFormModel.value.type = 'menu'
 
     await nextTick()
-    formRef.value?.clearValidate(['componentPath'])
+    formRef.value?.clearValidate(['type'])
+  }
+)
+
+watch(
+  () => localFormModel.value.type,
+  value => {
+    if (value !== 'directory' && localFormModel.value.icon) {
+      localFormModel.value.icon = ''
+    }
+  }
+)
+
+watch(
+  () => localFormModel.value.parentId,
+  async () => {
+    if (!forceMenuType.value || localFormModel.value.type !== 'directory') {
+      return
+    }
+
+    localFormModel.value.type = 'menu'
+
+    await nextTick()
+    formRef.value?.clearValidate(['type'])
   }
 )
 </script>
@@ -156,8 +191,8 @@ watch(
       <el-row :gutter="16">
         <el-col :xs="24" :sm="12">
           <el-form-item label="父级菜单">
-            <el-select v-model="localFormModel.parentId" placeholder="顶级菜单">
-              <el-option label="顶级菜单" value="" />
+            <el-select v-model="localFormModel.parentId" placeholder="目录级菜单">
+              <el-option label="目录级菜单" value="" />
               <el-option
                 v-for="option in parentOptions"
                 :key="option.value"
@@ -171,9 +206,10 @@ watch(
         <el-col :xs="24" :sm="12">
           <el-form-item label="菜单类型" prop="type">
             <el-select v-model="localFormModel.type" placeholder="请选择菜单类型">
-              <el-option label="目录" value="directory" />
+              <el-option label="目录" value="directory" :disabled="forceMenuType" />
               <el-option label="菜单" value="menu" />
             </el-select>
+            <div v-if="forceMenuType" class="form-tip">父级为目录时，子级仅支持菜单类型</div>
           </el-form-item>
         </el-col>
 
@@ -215,6 +251,31 @@ watch(
           </el-form-item>
         </el-col>
 
+        <el-col v-if="localFormModel.type === 'directory'" :xs="24" :sm="12">
+          <el-form-item label="目录图标">
+            <el-select
+              v-model="localFormModel.icon"
+              clearable
+              filterable
+              placeholder="请选择 Element Plus 图标"
+            >
+              <el-option
+                v-for="iconName in iconOptions"
+                :key="iconName"
+                :label="iconName"
+                :value="iconName"
+              >
+                <div class="icon-option">
+                  <el-icon class="icon-option__preview">
+                    <component :is="iconComponentMap[iconName]" />
+                  </el-icon>
+                  <span>{{ iconName }}</span>
+                </div>
+              </el-option>
+            </el-select>
+          </el-form-item>
+        </el-col>
+
         <el-col :xs="24">
           <el-form-item
             :label="localFormModel.type === 'menu' ? '组件路径 *' : '组件路径'"
@@ -225,9 +286,8 @@ watch(
               :placeholder="
                 localFormModel.type === 'menu'
                   ? '如 views/system/menu/MenuManagementIndex.vue'
-                  : '目录无需填写，已自动清空'
+                  : '目录可选，如 views/system/dashboard/DashboardIndex.vue'
               "
-              :disabled="localFormModel.type === 'directory'"
             />
           </el-form-item>
         </el-col>
@@ -269,6 +329,23 @@ watch(
   .el-dialog__footer {
     padding: var(--space-3) var(--space-5) var(--space-5);
     border-top: 1px solid var(--border-light);
+  }
+}
+
+.form-tip {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.icon-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  &__preview {
+    font-size: 14px;
   }
 }
 </style>

@@ -52,7 +52,6 @@ export interface UserCreateParams {
   password: string
   nickname?: string
   avatarUrl?: string
-  role?: UserRole
   isActive?: boolean
 }
 
@@ -61,7 +60,6 @@ export interface UserUpdateParams {
   password?: string
   nickname?: string
   avatarUrl?: string
-  role?: UserRole
   isActive?: boolean
 }
 
@@ -76,6 +74,5 @@ export interface UserFormModel {
   password: string
   nickname: string
   avatarUrl: string
-  role: UserRole
   status: UserStatus
 }

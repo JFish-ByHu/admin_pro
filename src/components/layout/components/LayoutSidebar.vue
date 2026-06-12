@@ -139,7 +139,6 @@ const selectMenu = () => {
         color: var(--t-regular);
         background-color: transparent;
         transition: all 0.2s ease;
-
         &:hover {
           background-color: var(--bg-hover) !important;
           color: var(--t-primary) !important;

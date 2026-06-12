@@ -34,7 +34,7 @@ import { useUserListQuery } from './composables/useUserListQuery'
 import { UserActionCell, UserFormDialog, UserIdentityCell } from './CompsExport'
 
 // 角色选项
-const roleOptions: { label: string; value: UserFormModel['role'] }[] = [
+const roleOptions: { label: string; value: string }[] = [
   { label: '超级管理员', value: 'super' },
   { label: '管理员', value: 'admin' },
   { label: '运营', value: 'operator' },
@@ -107,7 +107,6 @@ const createInitialFormModel = (): UserFormModel => ({
   password: '',
   nickname: '',
   avatarUrl: '',
-  role: 'user',
   status: 'enabled'
 })
 
@@ -141,7 +140,6 @@ const openEditUserDialog = (row: UserInfo) => {
     password: '',
     nickname: row.nickname,
     avatarUrl: row.avatarUrl || '',
-    role: row.role as UserFormModel['role'],
     status: row.status
   }
   dialogVisible.value = true
@@ -159,7 +157,6 @@ const buildCreatePayload = (): UserCreateParams => {
     password: formModel.value.password,
     nickname: formModel.value.nickname.trim(),
     avatarUrl: formModel.value.avatarUrl.trim() || undefined,
-    role: formModel.value.role,
     isActive: formModel.value.status === 'enabled'
   }
 }
@@ -189,7 +186,6 @@ const submitUserDialog = async () => {
       const requestData = new FormData()
       requestData.append('email', payload.email.trim())
       requestData.append('nickname', payload.nickname.trim())
-      requestData.append('role', payload.role)
       requestData.append('isActive', String(payload.status === 'enabled'))
 
       if (payload.password) {
@@ -510,7 +506,6 @@ useContentRefresh(() => getUsers())
         dialogMode === 'add' ? USER_PERMISSION_CODES.CREATE : USER_PERMISSION_CODES.UPDATE
       "
       :initial-value="formModel"
-      :role-options="roleOptions"
       :status-options="statusOptions"
       @submit="onDialogSubmit"
     />

@@ -192,16 +192,16 @@ service.interceptors.response.use(
           router.replace('/403')
           break
         case 404:
-          Message.error(`Not Found: ${error.config?.url}`)
+          Message.error(`Not Found`)
           break
         case 500:
         case 502:
         case 503:
         case 504:
-          Message.error('Network error')
+          Message.error(`Network error (${status})`)
           break
         default:
-          Message.error(`Unknown error: ${status}`)
+          Message.error(`${errorMessage}`)
       }
     } else {
       if (error.message.includes('timeout')) {

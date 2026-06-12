@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { FormInstance, FormRules, UploadInstance, UploadProps } from 'element-plus'
-import type { UserFormModel, UserFormSubmitPayload, UserRole, UserStatus } from '@/types/user'
+import type { UserFormModel, UserFormSubmitPayload, UserStatus } from '@/types/user'
 import { Message } from '@/utils/message'
 
 interface Option<T> {
@@ -16,7 +16,6 @@ const props = defineProps<{
   submitting: boolean
   submitPermission?: string | string[]
   initialValue: UserFormModel
-  roleOptions: Option<UserRole>[]
   statusOptions: Option<UserStatus>[]
 }>()
 
@@ -66,7 +65,6 @@ const formRules: FormRules<UserFormModel> = {
     }
   ],
   nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
-  role: [{ required: true, message: '请选择角色', trigger: 'change' }],
   status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }
 
@@ -77,7 +75,6 @@ function createInitialFormModel(): UserFormModel {
     password: '',
     nickname: '',
     avatarUrl: '',
-    role: 'user',
     status: 'enabled'
   }
 }
@@ -231,19 +228,6 @@ watch(
             <el-col :xs="24" :sm="12">
               <el-form-item label="昵称" prop="nickname">
                 <el-input v-model="localFormModel.nickname" placeholder="请输入昵称" />
-              </el-form-item>
-            </el-col>
-
-            <el-col :xs="24" :sm="12">
-              <el-form-item label="角色" prop="role">
-                <el-select v-model="localFormModel.role" placeholder="请选择角色">
-                  <el-option
-                    v-for="option in roleOptions"
-                    :key="option.value"
-                    :label="option.label"
-                    :value="option.value"
-                  />
-                </el-select>
               </el-form-item>
             </el-col>
 

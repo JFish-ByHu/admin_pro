@@ -85,6 +85,7 @@ const createInitialFormModel = (): MenuResourceFormModel => ({
   type: 'menu',
   routePath: '',
   componentPath: '',
+  icon: '',
   sort: 0,
   status: 'enabled'
 })
@@ -136,7 +137,7 @@ const editingNodeDescendants = computed(() => {
 })
 
 const parentOptions = computed(() => {
-  const options: Array<{ label: string; value: string }> = []
+  const options: Array<{ label: string; value: string; type: MenuResourceNode['type'] }> = []
 
   const travel = (nodes: MenuResourceNode[], level: number) => {
     nodes
@@ -146,7 +147,8 @@ const parentOptions = computed(() => {
         if (node.id !== editingMenuId.value && !editingNodeDescendants.value.has(node.id)) {
           options.push({
             label: `${'  '.repeat(level)}${node.name}`,
-            value: node.id
+            value: node.id,
+            type: node.type
           })
         }
 
@@ -186,6 +188,7 @@ const openEditMenuDialog = (row: MenuResourceTableItem) => {
     type: row.type,
     routePath: row.routePath,
     componentPath: row.componentPath,
+    icon: row.icon || '',
     sort: row.sort,
     status: row.status
   }
@@ -218,6 +221,7 @@ const submitMenuDialog = async (payload: MenuResourceFormModel) => {
         type: payload.type,
         routePath: payload.routePath,
         componentPath: payload.componentPath,
+        icon: payload.icon || undefined,
         sort: payload.sort,
         isActive: payload.status === 'enabled'
       })
@@ -229,6 +233,7 @@ const submitMenuDialog = async (payload: MenuResourceFormModel) => {
         type: payload.type,
         routePath: payload.routePath,
         componentPath: payload.componentPath,
+        icon: payload.icon || '',
         sort: payload.sort,
         isActive: payload.status === 'enabled'
       })

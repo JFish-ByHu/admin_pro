@@ -90,6 +90,7 @@ export interface UserMenuTreeNode {
   type: 'directory' | 'menu'
   routePath: string
   componentPath: string
+  icon: string | null
   sort: number
   children: UserMenuTreeNode[]
 }

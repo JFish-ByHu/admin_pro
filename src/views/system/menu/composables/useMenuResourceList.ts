@@ -69,6 +69,7 @@ export const useMenuResourceList = () => {
           type: node.type,
           routePath: node.routePath,
           componentPath: node.componentPath,
+          icon: node.icon,
           status: node.status,
           sort: node.sort,
           createTime: node.createTime,

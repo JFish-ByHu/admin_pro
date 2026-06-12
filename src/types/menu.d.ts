@@ -9,6 +9,7 @@ export interface MenuResourceNode {
   type: MenuResourceType
   routePath: string
   componentPath: string
+  icon: string | null
   status: MenuResourceStatus
   sort: number
   createTime: string
@@ -24,6 +25,7 @@ export interface MenuResourceTableItem {
   type: MenuResourceType
   routePath: string
   componentPath: string
+  icon: string | null
   status: MenuResourceStatus
   sort: number
   createTime: string
@@ -76,6 +78,7 @@ export interface MenuResourceCreateParams {
   type: MenuResourceType
   routePath: string
   componentPath: string
+  icon?: string
   sort?: number
   isActive?: boolean
 }
@@ -86,6 +89,7 @@ export interface MenuResourceUpdateParams {
   type?: MenuResourceType
   routePath?: string
   componentPath?: string
+  icon?: string
   sort?: number
   isActive?: boolean
 }
@@ -96,6 +100,7 @@ export interface MenuResourceFormModel {
   type: MenuResourceType
   routePath: string
   componentPath: string
+  icon: string
   sort: number
   status: MenuResourceStatus
 }

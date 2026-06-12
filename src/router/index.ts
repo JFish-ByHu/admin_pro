@@ -77,7 +77,7 @@ const buildDynamicChildRoutes = (menuTree: UserMenuTreeNode[]): RouteRecordRaw[]
   const routes: RouteRecordRaw[] = []
 
   flattenMenuTree(menuTree)
-    .filter(item => item.type === 'menu')
+    .filter(item => item.routePath && item.componentPath)
     .forEach(item => {
       const routePath = item.routePath?.trim() || ''
       if (!routePath) {
