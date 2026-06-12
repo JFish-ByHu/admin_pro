@@ -92,14 +92,14 @@ export class UserService {
   async findByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
-      relations: { roles: { permissions: true } }
+      relations: { roles: { permissions: true, menus: true } }
     })
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { email },
-      relations: { roles: { permissions: true } }
+      relations: { roles: { permissions: true, menus: true } }
     })
   }
 
@@ -111,7 +111,7 @@ export class UserService {
   async findById(id: string): Promise<User | null> {
     return this.userRepository.findOne({
       where: { id },
-      relations: { roles: { permissions: true } }
+      relations: { roles: { permissions: true, menus: true } }
     })
   }
 

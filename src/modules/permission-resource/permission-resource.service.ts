@@ -19,6 +19,7 @@ import {
   RolePermissionGrantDetailResponseDto
 } from './dto/permission-resource-response.dto'
 import { GrantRolePermissionDto } from './dto/grant-role-permission.dto'
+import { RbacSyncService } from '../../common/ws/rbac-sync.service'
 
 @Injectable()
 export class PermissionResourceService {
@@ -26,7 +27,8 @@ export class PermissionResourceService {
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
     @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>
+    private readonly roleRepository: Repository<Role>,
+    private readonly rbacSyncService: RbacSyncService
   ) {}
 
   private toPermissionResponse(permission: Permission): PermissionResourceResponseDto {
@@ -141,6 +143,21 @@ export class PermissionResourceService {
     return roots
   }
 
+  private async getRoleIdsByPermissionIds(permissionIds: string[]): Promise<string[]> {
+    if (!permissionIds.length) {
+      return []
+    }
+
+    const roleRows = await this.roleRepository
+      .createQueryBuilder('role')
+      .leftJoin('role.permissions', 'permission')
+      .select('role.id', 'id')
+      .where('permission.id IN (:...permissionIds)', { permissionIds })
+      .getRawMany<{ id: string }>()
+
+    return Array.from(new Set(roleRows.map(row => row.id)))
+  }
+
   async list(query: QueryPermissionResourceDto): Promise<PermissionResourceListResponseDto> {
     const { keyword, type, status, all = false, page = 1, pageSize = 20 } = query
 
@@ -221,6 +238,15 @@ export class PermissionResourceService {
     })
 
     const saved = await this.permissionRepository.save(item)
+
+    const superRoleIds = (
+      await this.roleRepository.find({
+        select: { id: true },
+        where: { code: 'super', isActive: true }
+      })
+    ).map(role => role.id)
+    this.rbacSyncService.emitToRoles(superRoleIds, { scope: 'permission' })
+
     return this.toPermissionResponse(saved)
   }
 
@@ -232,6 +258,8 @@ export class PermissionResourceService {
     if (!item) {
       throw new NotFoundException('权限资源不存在')
     }
+
+    const impactedRoleIds = await this.getRoleIdsByPermissionIds([id])
 
     if (dto.parentId !== undefined) {
       await this.ensureParentValid(dto.parentId, id)
@@ -256,6 +284,7 @@ export class PermissionResourceService {
     if (dto.isActive !== undefined) item.isActive = dto.isActive
 
     const saved = await this.permissionRepository.save(item)
+    this.rbacSyncService.emitToRoles(impactedRoleIds, { scope: 'permission' })
     return this.toPermissionResponse(saved)
   }
 
@@ -270,7 +299,10 @@ export class PermissionResourceService {
       throw new BadRequestException('当前权限存在子节点，不能直接删除')
     }
 
+    const impactedRoleIds = await this.getRoleIdsByPermissionIds([id])
+
     await this.permissionRepository.remove(item)
+    this.rbacSyncService.emitToRoles(impactedRoleIds, { scope: 'permission' })
   }
 
   async batchDelete(ids: string[]): Promise<{ deleted: number }> {
@@ -292,7 +324,10 @@ export class PermissionResourceService {
       throw new BadRequestException('批量删除失败，所选权限中包含父节点')
     }
 
+    const impactedRoleIds = await this.getRoleIdsByPermissionIds(ids)
+
     await this.permissionRepository.remove(list)
+    this.rbacSyncService.emitToRoles(impactedRoleIds, { scope: 'permission' })
     return { deleted: list.length }
   }
 
@@ -332,5 +367,10 @@ export class PermissionResourceService {
 
     role.permissions = permissions
     await this.roleRepository.save(role)
+
+    this.rbacSyncService.emitToRoles([role.id], {
+      scope: 'permission',
+      roleId: role.id
+    })
   }
 }

@@ -20,6 +20,7 @@ import {
   RoleResponseDto,
   RoleUserGrantDetailResponseDto
 } from './dto/role-response.dto'
+import { RbacSyncService } from '../../common/ws/rbac-sync.service'
 
 @Injectable()
 export class RoleService {
@@ -31,7 +32,8 @@ export class RoleService {
     @InjectRepository(Menu)
     private readonly menuRepository: Repository<Menu>,
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
+    private readonly rbacSyncService: RbacSyncService
   ) {}
 
   private toRoleResponse(role: Role): RoleResponseDto {
@@ -207,6 +209,15 @@ export class RoleService {
     }
 
     const saved = await this.roleRepository.save(role)
+
+    if (dto.permissionIds !== undefined || dto.menuIds !== undefined) {
+      const impactedUserIds = (role.users || []).map(user => user.id)
+      this.rbacSyncService.emitToUsersAndRoles(impactedUserIds, [role.id], {
+        scope: 'rbac',
+        roleId: role.id
+      })
+    }
+
     return this.toRoleDetailResponse(saved)
   }
 
@@ -301,8 +312,16 @@ export class RoleService {
       }
     }
 
+    const previousUserIds = (role.users || []).map(user => user.id)
+
     role.users = users
     await this.roleRepository.save(role)
+
+    const impactedUserIds = Array.from(new Set([...previousUserIds, ...userIds]))
+    this.rbacSyncService.emitToUsersAndRoles(impactedUserIds, [roleId], {
+      scope: 'role-user',
+      roleId
+    })
   }
 
   async listSimple(): Promise<Array<{ id: string; code: string; name: string }>> {

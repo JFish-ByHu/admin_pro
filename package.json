@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "check:permissions": "node scripts/check-permissions.cjs",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -26,7 +27,9 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.26",
     "@nestjs/typeorm": "^11.0.1",
+    "@nestjs/websockets": "^11.1.26",
     "bcryptjs": "^3.0.3",
     "cache-manager": "^7.2.8",
     "class-transformer": "^0.5.1",
@@ -36,6 +39,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3",
     "sql.js": "^1.14.1",
     "typeorm": "^1.0.0"
   },

@@ -9,6 +9,17 @@ import {
 } from 'typeorm'
 import { Role } from './role.entity'
 
+type UserMenuTreeNode = {
+  id: string
+  parentId: string | null
+  name: string
+  type: 'directory' | 'menu'
+  routePath: string
+  componentPath: string
+  sort: number
+  children: UserMenuTreeNode[]
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -69,5 +80,75 @@ export class User {
           ) || []
       )
     )
+  }
+
+  getMenuRoutePaths(): string[] {
+    return Array.from(
+      new Set(
+        this.roles
+          ?.filter(role => role.isActive !== false)
+          .flatMap(
+            role =>
+              role.menus
+                ?.filter(menu => menu.isActive !== false)
+                .map(menu => menu.routePath)
+                .filter((routePath): routePath is string => Boolean(routePath)) || []
+          ) || []
+      )
+    )
+  }
+
+  getMenuTree(): UserMenuTreeNode[] {
+    const activeMenus =
+      this.roles
+        ?.filter(role => role.isActive !== false)
+        .flatMap(role => role.menus?.filter(menu => menu.isActive !== false) || []) || []
+
+    const menuMap = new Map<string, UserMenuTreeNode>()
+    activeMenus.forEach(menu => {
+      if (menuMap.has(menu.id)) {
+        return
+      }
+
+      menuMap.set(menu.id, {
+        id: menu.id,
+        parentId: menu.parentId,
+        name: menu.name,
+        type: menu.type,
+        routePath: menu.routePath,
+        componentPath: menu.componentPath,
+        sort: menu.sort,
+        children: []
+      })
+    })
+
+    const roots: UserMenuTreeNode[] = []
+
+    menuMap.forEach(node => {
+      if (!node.parentId) {
+        roots.push(node)
+        return
+      }
+
+      const parent = menuMap.get(node.parentId)
+      if (!parent) {
+        roots.push(node)
+        return
+      }
+
+      parent.children.push(node)
+    })
+
+    const sortTree = (nodes: UserMenuTreeNode[]) => {
+      nodes.sort((a, b) => a.sort - b.sort)
+      nodes.forEach(node => {
+        if (node.children.length > 0) {
+          sortTree(node.children)
+        }
+      })
+    }
+
+    sortTree(roots)
+    return roots
   }
 }

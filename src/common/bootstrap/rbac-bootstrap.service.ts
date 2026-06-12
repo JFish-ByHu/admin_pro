@@ -5,6 +5,7 @@ import { Menu } from '../../modules/menu/entities/menu.entity'
 import { Permission } from '../../modules/user/entities/permission.entity'
 import { Role } from '../../modules/user/entities/role.entity'
 import { User } from '../../modules/user/entities/user.entity'
+import { PERMISSION_DEFINITIONS } from '../rbac/permission-registry'
 
 @Injectable()
 export class RbacBootstrapService {
@@ -49,61 +50,71 @@ export class RbacBootstrapService {
     }
   ] as const
 
-  private readonly permissionSeeds = [
-    { code: 'system:user:list', name: '用户列表', type: 'api' },
-    { code: 'system:user:detail', name: '用户详情', type: 'api' },
-    { code: 'system:user:create', name: '创建用户', type: 'button' },
-    { code: 'system:user:update', name: '更新用户', type: 'button' },
-    { code: 'system:user:delete', name: '删除用户', type: 'button' },
-    { code: 'system:menu:list', name: '菜单列表', type: 'api' },
-    { code: 'system:menu:detail', name: '菜单详情', type: 'api' },
-    { code: 'system:menu:create', name: '创建菜单', type: 'button' },
-    { code: 'system:menu:update', name: '更新菜单', type: 'button' },
-    { code: 'system:menu:delete', name: '删除菜单', type: 'button' },
-    { code: 'system:menu:grant', name: '菜单授权', type: 'button' },
-    { code: 'system:permission:list', name: '权限列表', type: 'api' },
-    { code: 'system:permission:detail', name: '权限详情', type: 'api' },
-    { code: 'system:permission:create', name: '创建权限', type: 'button' },
-    { code: 'system:permission:update', name: '更新权限', type: 'button' },
-    { code: 'system:permission:delete', name: '删除权限', type: 'button' },
-    { code: 'system:permission:grant', name: '权限授权', type: 'button' },
-    { code: 'system:role:list', name: '角色列表', type: 'api' },
-    { code: 'system:role:detail', name: '角色详情', type: 'api' },
-    { code: 'system:role:create', name: '创建角色', type: 'button' },
-    { code: 'system:role:update', name: '更新角色', type: 'button' },
-    { code: 'system:role:delete', name: '删除角色', type: 'button' }
-  ] as const
-
-  private readonly menuSeeds = [
+  private readonly menuSeeds: Array<{
+    name: string
+    type: 'directory' | 'menu'
+    routePath: string
+    parentRoutePath: string | null
+    componentPath: string
+    sort: number
+  }> = [
     {
       name: '控制台',
       type: 'menu',
       routePath: '/dashboard',
+      parentRoutePath: null,
       componentPath: 'views/dashboard/DashboardIndex.vue',
       sort: 1
     },
     {
       name: '用户管理',
+      type: 'directory',
+      routePath: '/user',
+      parentRoutePath: null,
+      componentPath: '',
+      sort: 10
+    },
+    {
+      name: '用户信息',
       type: 'menu',
       routePath: '/user/info',
+      parentRoutePath: '/user',
       componentPath: 'views/user/UserInfoIndex.vue',
-      sort: 10
+      sort: 11
+    },
+    {
+      name: '系统设置',
+      type: 'directory',
+      routePath: '/system',
+      parentRoutePath: null,
+      componentPath: '',
+      sort: 20
+    },
+    {
+      name: '角色管理',
+      type: 'menu',
+      routePath: '/system/role',
+      parentRoutePath: '/system',
+      componentPath: 'views/system/role/RoleManagementIndex.vue',
+      sort: 21
     },
     {
       name: '菜单管理',
       type: 'menu',
       routePath: '/system/menu',
+      parentRoutePath: '/system',
       componentPath: 'views/system/menu/MenuManagementIndex.vue',
-      sort: 20
+      sort: 22
     },
     {
       name: '权限管理',
       type: 'menu',
       routePath: '/system/permission',
+      parentRoutePath: '/system',
       componentPath: 'views/system/permission/PermissionManagementIndex.vue',
-      sort: 21
+      sort: 23
     }
-  ] as const
+  ]
 
   async bootstrap(): Promise<void> {
     await this.ensureBaseRoles()
@@ -149,35 +160,60 @@ export class RbacBootstrapService {
   }
 
   private async ensureBasePermissions(): Promise<void> {
-    let sort = 1
-    for (const seed of this.permissionSeeds) {
-      const exists = await this.permissionRepository.findOne({ where: { code: seed.code } })
-      if (exists) {
-        sort += 1
+    const exists = await this.permissionRepository.find({
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        type: true,
+        sort: true
+      }
+    })
+    const existsMap = new Map(exists.map(item => [item.code, item]))
+
+    for (const seed of PERMISSION_DEFINITIONS) {
+      const current = existsMap.get(seed.code)
+
+      if (!current) {
+        const permission = this.permissionRepository.create({
+          parentId: null,
+          code: seed.code,
+          name: seed.name,
+          type: seed.type,
+          apiPath: null,
+          httpMethod: null,
+          sort: seed.sort,
+          isActive: true
+        })
+
+        await this.permissionRepository.save(permission)
+        this.logger.log(`已初始化权限: ${seed.code}`)
         continue
       }
 
-      const permission = this.permissionRepository.create({
-        parentId: null,
-        code: seed.code,
+      const needSync =
+        current.name !== seed.name || current.type !== seed.type || current.sort !== seed.sort
+
+      if (!needSync) {
+        continue
+      }
+
+      await this.permissionRepository.save({
+        ...current,
         name: seed.name,
         type: seed.type,
-        apiPath: null,
-        httpMethod: null,
-        sort,
-        isActive: true
+        sort: seed.sort
       })
-
-      await this.permissionRepository.save(permission)
-      this.logger.log(`已初始化权限: ${seed.code}`)
-      sort += 1
+      this.logger.log(`已同步权限定义: ${seed.code}`)
     }
   }
 
   private async ensureBaseMenus(): Promise<void> {
+    const allMenus = await this.menuRepository.find()
+    const menuMap = new Map(allMenus.map(item => [item.routePath, item]))
+
     for (const seed of this.menuSeeds) {
-      const exists = await this.menuRepository.findOne({ where: { routePath: seed.routePath } })
-      if (exists) {
+      if (menuMap.has(seed.routePath)) {
         continue
       }
 
@@ -191,8 +227,42 @@ export class RbacBootstrapService {
         isActive: true
       })
 
-      await this.menuRepository.save(menu)
+      const saved = await this.menuRepository.save(menu)
+      menuMap.set(saved.routePath, saved)
       this.logger.log(`已初始化菜单: ${seed.routePath}`)
+    }
+
+    for (const seed of this.menuSeeds) {
+      const current = menuMap.get(seed.routePath)
+      if (!current) {
+        continue
+      }
+
+      const parentMenu = seed.parentRoutePath ? menuMap.get(seed.parentRoutePath) : null
+      const nextParentId = parentMenu?.id || null
+
+      const needSync =
+        current.parentId !== nextParentId ||
+        current.name !== seed.name ||
+        current.type !== seed.type ||
+        current.componentPath !== seed.componentPath ||
+        current.sort !== seed.sort
+
+      if (!needSync) {
+        continue
+      }
+
+      const updated = await this.menuRepository.save({
+        ...current,
+        parentId: nextParentId,
+        name: seed.name,
+        type: seed.type,
+        componentPath: seed.componentPath,
+        sort: seed.sort
+      })
+
+      menuMap.set(updated.routePath, updated)
+      this.logger.log(`已同步菜单定义: ${seed.routePath}`)
     }
   }
 

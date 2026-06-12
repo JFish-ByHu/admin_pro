@@ -15,6 +15,7 @@ import { RequirePermissions } from '../../common/decorators/permissions.decorato
 import { PermissionsGuard } from '../../common/guards/permissions.guard'
 import { success } from '../../common/response/api-response'
 import type { ApiSuccessBody } from '../../common/response/api-response'
+import { PERMISSION_PERMISSION_CODES } from '../../common/rbac/permission-registry'
 import { PermissionResourceService } from './permission-resource.service'
 import { CreatePermissionResourceDto } from './dto/create-permission-resource.dto'
 import { UpdatePermissionResourceDto } from './dto/update-permission-resource.dto'
@@ -33,7 +34,7 @@ export class PermissionResourceController {
   constructor(private readonly permissionResourceService: PermissionResourceService) {}
 
   @Get('list')
-  @RequirePermissions('system:permission:list')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.LIST)
   async list(
     @Query() query: QueryPermissionResourceDto
   ): Promise<ApiSuccessBody<PermissionResourceListResponseDto>> {
@@ -42,14 +43,14 @@ export class PermissionResourceController {
   }
 
   @Get('tree')
-  @RequirePermissions('system:permission:list')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.LIST)
   async tree(): Promise<ApiSuccessBody<PermissionResourceTreeNodeDto[]>> {
     const data = await this.permissionResourceService.tree()
     return success(data, '查询成功')
   }
 
   @Get('detail/:id')
-  @RequirePermissions('system:permission:detail')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.DETAIL)
   async detail(
     @Param('id', ParseUUIDPipe) id: string
   ): Promise<ApiSuccessBody<PermissionResourceResponseDto>> {
@@ -58,7 +59,7 @@ export class PermissionResourceController {
   }
 
   @Post('add')
-  @RequirePermissions('system:permission:create')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.CREATE)
   async add(
     @Body() dto: CreatePermissionResourceDto
   ): Promise<ApiSuccessBody<PermissionResourceResponseDto>> {
@@ -67,7 +68,7 @@ export class PermissionResourceController {
   }
 
   @Patch('update/:id')
-  @RequirePermissions('system:permission:update')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.UPDATE)
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePermissionResourceDto
@@ -77,21 +78,21 @@ export class PermissionResourceController {
   }
 
   @Delete('delete/:id')
-  @RequirePermissions('system:permission:delete')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.DELETE)
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<null>> {
     await this.permissionResourceService.delete(id)
     return success(null, '删除成功')
   }
 
   @Delete('batchDelete')
-  @RequirePermissions('system:permission:delete')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.DELETE)
   async batchDelete(@Body('ids') ids: string[]): Promise<ApiSuccessBody<{ deleted: number }>> {
     const data = await this.permissionResourceService.batchDelete(ids)
     return success(data, `成功删除 ${data.deleted} 项`)
   }
 
   @Get('grant/detail')
-  @RequirePermissions('system:permission:grant')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.GRANT)
   async grantDetail(
     @Query('roleId', ParseUUIDPipe) roleId: string
   ): Promise<ApiSuccessBody<RolePermissionGrantDetailResponseDto>> {
@@ -100,7 +101,7 @@ export class PermissionResourceController {
   }
 
   @Post('grant/update')
-  @RequirePermissions('system:permission:grant')
+  @RequirePermissions(PERMISSION_PERMISSION_CODES.GRANT)
   async grantUpdate(@Body() dto: GrantRolePermissionDto): Promise<ApiSuccessBody<null>> {
     await this.permissionResourceService.updateRoleGrant(dto)
     return success(null, '授权成功')

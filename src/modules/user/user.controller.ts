@@ -30,6 +30,7 @@ import { success } from '../../common/response/api-response'
 import type { ApiSuccessBody } from '../../common/response/api-response'
 import { RequirePermissions } from '../../common/decorators/permissions.decorator'
 import { PermissionsGuard } from '../../common/guards/permissions.guard'
+import { USER_PERMISSION_CODES } from '../../common/rbac/permission-registry'
 
 const UPLOAD_ROOT_DIR = process.env.UPLOAD_ROOT_DIR || 'upload'
 const UPLOAD_AVATAR_DIR = process.env.UPLOAD_AVATAR_DIR || 'avatars'
@@ -80,7 +81,7 @@ export class UserController {
    * 分页查询用户列表，支持关键词 / 角色 / 状态筛选
    */
   @Get('list')
-  @RequirePermissions('system:user:list')
+  @RequirePermissions(USER_PERMISSION_CODES.LIST)
   async list(@Query() query: QueryUserDto): Promise<ApiSuccessBody<UserListResponseDto>> {
     const result = await this.userService.findAll(query)
     return success(result, '查询成功')
@@ -91,7 +92,7 @@ export class UserController {
    * 查询单个用户详情
    */
   @Get('detail/:id')
-  @RequirePermissions('system:user:detail')
+  @RequirePermissions(USER_PERMISSION_CODES.DETAIL)
   async detail(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.findOne(id)
     return success(user, '查询成功')
@@ -102,7 +103,7 @@ export class UserController {
    * 新增用户（管理员手动创建，密码明文传入，服务层哈希处理）
    */
   @Post('add')
-  @RequirePermissions('system:user:create')
+  @RequirePermissions(USER_PERMISSION_CODES.CREATE)
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
@@ -120,7 +121,7 @@ export class UserController {
    * 更新用户信息（支持部分更新）
    */
   @Patch('update/:id')
-  @RequirePermissions('system:user:update')
+  @RequirePermissions(USER_PERMISSION_CODES.UPDATE)
   @UseInterceptors(
     FileInterceptor('avatar', {
       limits: { fileSize: AVATAR_MAX_SIZE }
@@ -200,7 +201,7 @@ export class UserController {
    * 删除单个用户
    */
   @Delete('delete/:id')
-  @RequirePermissions('system:user:delete')
+  @RequirePermissions(USER_PERMISSION_CODES.DELETE)
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<null>> {
     await this.userService.removeUser(id)
     return success(null, '用户删除成功')
@@ -211,7 +212,7 @@ export class UserController {
    * 批量删除用户，Body: { ids: string[] }
    */
   @Delete('batchDelete')
-  @RequirePermissions('system:user:delete')
+  @RequirePermissions(USER_PERMISSION_CODES.DELETE)
   async batchDelete(@Body('ids') ids: string[]): Promise<ApiSuccessBody<{ deleted: number }>> {
     const result = await this.userService.batchRemoveUsers(ids)
     return success(result, `成功删除 ${result.deleted} 个用户`)
@@ -222,7 +223,7 @@ export class UserController {
    * 查询用户角色分配明细
    */
   @Get('roleDetail/:id')
-  @RequirePermissions('system:user:detail')
+  @RequirePermissions(USER_PERMISSION_CODES.DETAIL)
   async roleDetail(
     @Param('id', ParseUUIDPipe) id: string
   ): Promise<ApiSuccessBody<{ userId: string; roleIds: string[] }>> {
@@ -235,7 +236,7 @@ export class UserController {
    * 分配用户角色（角色管理主导）
    */
   @Post('assignRoles')
-  @RequirePermissions('system:user:update')
+  @RequirePermissions(USER_PERMISSION_CODES.UPDATE)
   async assignRoles(@Body() dto: AssignUserRolesDto): Promise<ApiSuccessBody<UserResponseDto>> {
     const result = await this.userService.assignUserRoles(dto.userId, dto.roleIds)
     return success(result, '角色分配成功')

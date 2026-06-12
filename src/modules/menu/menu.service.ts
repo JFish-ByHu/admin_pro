@@ -19,6 +19,7 @@ import {
   RoleMenuGrantDetailResponseDto
 } from './dto/menu-response.dto'
 import { GrantRoleMenuDto } from './dto/grant-role-menu.dto'
+import { RbacSyncService } from '../../common/ws/rbac-sync.service'
 
 @Injectable()
 export class MenuService {
@@ -26,7 +27,8 @@ export class MenuService {
     @InjectRepository(Menu)
     private readonly menuRepository: Repository<Menu>,
     @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>
+    private readonly roleRepository: Repository<Role>,
+    private readonly rbacSyncService: RbacSyncService
   ) {}
 
   private toMenuResourceResponse(menu: Menu): MenuResourceResponseDto {
@@ -140,6 +142,96 @@ export class MenuService {
     return roots
   }
 
+  private collectSubtreeIds(
+    allMenus: Array<Pick<Menu, 'id' | 'parentId'>>,
+    rootIds: string[]
+  ): string[] {
+    const childrenMap = new Map<string, string[]>()
+
+    allMenus.forEach(menu => {
+      if (!menu.parentId) {
+        return
+      }
+
+      const children = childrenMap.get(menu.parentId) || []
+      children.push(menu.id)
+      childrenMap.set(menu.parentId, children)
+    })
+
+    const result = new Set<string>()
+    const stack = [...rootIds]
+
+    while (stack.length > 0) {
+      const currentId = stack.pop() as string
+      if (result.has(currentId)) {
+        continue
+      }
+
+      result.add(currentId)
+
+      const children = childrenMap.get(currentId) || []
+      children.forEach(childId => {
+        if (!result.has(childId)) {
+          stack.push(childId)
+        }
+      })
+    }
+
+    return Array.from(result)
+  }
+
+  private async assignMenuToSuperRole(menuId: string): Promise<void> {
+    const superRoles = await this.roleRepository.find({
+      where: { code: 'super' },
+      relations: { menus: true }
+    })
+
+    if (!superRoles.length) {
+      return
+    }
+
+    const menu = await this.menuRepository.findOne({ where: { id: menuId } })
+    if (!menu) {
+      return
+    }
+
+    await Promise.all(
+      superRoles.map(async role => {
+        const menus = role.menus || []
+        if (menus.some(item => item.id === menuId)) {
+          return
+        }
+
+        role.menus = [...menus, menu]
+        await this.roleRepository.save(role)
+      })
+    )
+  }
+
+  private async getSuperRoleIds(): Promise<string[]> {
+    const roles = await this.roleRepository.find({
+      select: { id: true },
+      where: { code: 'super', isActive: true }
+    })
+
+    return roles.map(role => role.id)
+  }
+
+  private async getRoleIdsByMenuIds(menuIds: string[]): Promise<string[]> {
+    if (!menuIds.length) {
+      return []
+    }
+
+    const roleRows = await this.roleRepository
+      .createQueryBuilder('role')
+      .leftJoin('role.menus', 'menu')
+      .select('role.id', 'id')
+      .where('menu.id IN (:...menuIds)', { menuIds })
+      .getRawMany<{ id: string }>()
+
+    return Array.from(new Set(roleRows.map(row => row.id)))
+  }
+
   async list(query: QueryMenuDto): Promise<MenuResourceListResponseDto> {
     const { keyword, type, status, all = false, page = 1, pageSize = 20 } = query
 
@@ -219,6 +311,11 @@ export class MenuService {
     })
 
     const saved = await this.menuRepository.save(menu)
+    await this.assignMenuToSuperRole(saved.id)
+
+    const superRoleIds = await this.getSuperRoleIds()
+    this.rbacSyncService.emitToRoles(superRoleIds, { scope: 'menu' })
+
     return this.toMenuResourceResponse(saved)
   }
 
@@ -227,6 +324,8 @@ export class MenuService {
     if (!menu) {
       throw new NotFoundException('菜单不存在')
     }
+
+    const impactedRoleIds = await this.getRoleIdsByMenuIds([id])
 
     if (dto.parentId !== undefined) {
       await this.ensureMenuParentValid(dto.parentId, id)
@@ -250,6 +349,8 @@ export class MenuService {
     if (dto.isActive !== undefined) menu.isActive = dto.isActive
 
     const saved = await this.menuRepository.save(menu)
+    this.rbacSyncService.emitToRoles(impactedRoleIds, { scope: 'menu' })
+
     return this.toMenuResourceResponse(saved)
   }
 
@@ -259,12 +360,20 @@ export class MenuService {
       throw new NotFoundException('菜单不存在')
     }
 
-    const hasChildren = await this.menuRepository.findOne({ where: { parentId: id } })
-    if (hasChildren) {
-      throw new BadRequestException('当前菜单存在子节点，不能直接删除')
+    const allMenus = await this.menuRepository.find({
+      select: { id: true, parentId: true }
+    })
+
+    const subtreeIds = this.collectSubtreeIds(allMenus, [id])
+    const impactedRoleIds = await this.getRoleIdsByMenuIds(subtreeIds)
+    const removeTargets = await this.menuRepository.findBy({ id: In(subtreeIds) })
+
+    if (!removeTargets.length) {
+      return
     }
 
-    await this.menuRepository.remove(menu)
+    await this.menuRepository.remove(removeTargets)
+    this.rbacSyncService.emitToRoles(impactedRoleIds, { scope: 'menu' })
   }
 
   async batchDelete(ids: string[]): Promise<{ deleted: number }> {
@@ -277,17 +386,21 @@ export class MenuService {
       throw new NotFoundException('未找到可删除的菜单')
     }
 
-    const hasChildren = await this.menuRepository
-      .createQueryBuilder('menu')
-      .where('menu.parentId IN (:...ids)', { ids })
-      .getCount()
+    const allMenus = await this.menuRepository.find({
+      select: { id: true, parentId: true }
+    })
 
-    if (hasChildren > 0) {
-      throw new BadRequestException('批量删除失败，所选菜单中包含父节点')
+    const subtreeIds = this.collectSubtreeIds(allMenus, ids)
+    const impactedRoleIds = await this.getRoleIdsByMenuIds(subtreeIds)
+    const removeTargets = await this.menuRepository.findBy({ id: In(subtreeIds) })
+
+    if (!removeTargets.length) {
+      return { deleted: 0 }
     }
 
-    await this.menuRepository.remove(list)
-    return { deleted: list.length }
+    await this.menuRepository.remove(removeTargets)
+    this.rbacSyncService.emitToRoles(impactedRoleIds, { scope: 'menu' })
+    return { deleted: removeTargets.length }
   }
 
   async getRoleGrantDetail(roleId: string): Promise<RoleMenuGrantDetailResponseDto> {
@@ -326,5 +439,10 @@ export class MenuService {
 
     role.menus = menus
     await this.roleRepository.save(role)
+
+    this.rbacSyncService.emitToRoles([role.id], {
+      scope: 'menu',
+      roleId: role.id
+    })
   }
 }

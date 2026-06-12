@@ -127,4 +127,12 @@ export class AuthController {
   ): Promise<ApiSuccessBody<LogoutResponseDto>> {
     return success(await this.authService.logout(request.user.id))
   }
+
+  @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  async getCurrentUserInfo(
+    @Req() request: { user: { id: string } }
+  ): Promise<ApiSuccessBody<LoginResponseDto['userInfo']>> {
+    return success(await this.authService.getCurrentUserInfo(request.user.id))
+  }
 }

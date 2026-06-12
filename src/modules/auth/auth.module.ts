@@ -9,12 +9,13 @@ import { JwtStrategy } from './strategies/jwt.strategy'
 import { getRequiredEnv } from '../../common/config/env'
 import { EmailVerification } from './entities/email-verification.entity'
 import { MailService } from './mail.service'
+import { Menu } from '../menu/entities/menu.entity'
 
 @Module({
   imports: [
     UserModule,
     PassportModule,
-    TypeOrmModule.forFeature([EmailVerification]),
+    TypeOrmModule.forFeature([EmailVerification, Menu]),
     JwtModule.register({
       secret: getRequiredEnv('JWT_ACCESS_SECRET'),
       signOptions: { expiresIn: '2h' } // Access Token 默认 2 小时过期

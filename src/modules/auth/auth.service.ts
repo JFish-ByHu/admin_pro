@@ -14,6 +14,7 @@ import { JwtService } from '@nestjs/jwt'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { UserService } from '../user/user.service'
+import { Menu } from '../menu/entities/menu.entity'
 import { RegisterDto } from './dto/register.dto'
 import { LoginDto } from './dto/login.dto'
 import { EmailLoginDto } from './dto/email-login.dto'
@@ -27,6 +28,7 @@ import { PasswordUtil } from '../../common/utils/password.util'
 import { EmailVerification } from './entities/email-verification.entity'
 import { MailService } from './mail.service'
 import {
+  AuthMenuTreeNodeDto,
   AuthUserInfoDto,
   CaptchaResponseDto,
   CheckResetEmailResponseDto,
@@ -70,6 +72,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    @InjectRepository(Menu)
+    private readonly menuRepository: Repository<Menu>,
     @InjectRepository(EmailVerification)
     private readonly emailVerificationRepository: Repository<EmailVerification>
   ) {}
@@ -429,21 +433,122 @@ export class AuthService {
     return this.toLogoutResponseDto()
   }
 
+  async getCurrentUserInfo(userId: string): Promise<AuthUserInfoDto> {
+    const user = await this.userService.findById(userId)
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('用户已失效，请重新登录')
+    }
+
+    const menuTree = await this.buildAuthorizedMenuTree(user)
+    return this.buildUserInfo(user, menuTree)
+  }
+
   private async issueTokens(userId: string, username: string): Promise<RefreshTokenResponseDto> {
     const tokens = this.generateTokens(userId, username)
     await this.storeRefreshToken(userId, tokens.refreshToken)
     return tokens
   }
 
-  private buildUserInfo(user: {
-    id: string
-    username: string
-    email: string
-    nickname: string | null
-    avatarUrl: string | null
-    getDisplayRole(): string
-    getPermissionCodes(): string[]
-  }): AuthUserInfoDto {
+  private buildMenuTreeFromMenus(menus: Menu[]): AuthMenuTreeNodeDto[] {
+    const nodeMap = new Map<string, AuthMenuTreeNodeDto>()
+
+    menus.forEach(menu => {
+      nodeMap.set(menu.id, {
+        id: menu.id,
+        parentId: menu.parentId,
+        name: menu.name,
+        type: menu.type,
+        routePath: menu.routePath,
+        componentPath: menu.componentPath,
+        sort: menu.sort,
+        children: []
+      })
+    })
+
+    const roots: AuthMenuTreeNodeDto[] = []
+
+    nodeMap.forEach(node => {
+      if (!node.parentId) {
+        roots.push(node)
+        return
+      }
+
+      const parent = nodeMap.get(node.parentId)
+      if (!parent) {
+        roots.push(node)
+        return
+      }
+
+      parent.children.push(node)
+    })
+
+    const sortTree = (nodes: AuthMenuTreeNodeDto[]) => {
+      nodes.sort((a, b) => a.sort - b.sort)
+      nodes.forEach(node => {
+        if (node.children.length > 0) {
+          sortTree(node.children)
+        }
+      })
+    }
+
+    sortTree(roots)
+    return roots
+  }
+
+  private async buildAuthorizedMenuTree(user: {
+    getMenuRoutePaths(): string[]
+  }): Promise<AuthMenuTreeNodeDto[]> {
+    const grantedRoutePaths = new Set(user.getMenuRoutePaths())
+    if (grantedRoutePaths.size === 0) {
+      return []
+    }
+
+    const allActiveMenus = await this.menuRepository.find({
+      where: { isActive: true },
+      order: { sort: 'ASC', createTime: 'DESC' }
+    })
+
+    const menuById = new Map(allActiveMenus.map(menu => [menu.id, menu]))
+    const includedIds = new Set(
+      allActiveMenus.filter(menu => grantedRoutePaths.has(menu.routePath)).map(menu => menu.id)
+    )
+
+    Array.from(includedIds).forEach(menuId => {
+      let current = menuById.get(menuId)
+
+      while (current?.parentId) {
+        const parent = menuById.get(current.parentId)
+        if (!parent) {
+          break
+        }
+
+        if (includedIds.has(parent.id)) {
+          current = parent
+          continue
+        }
+
+        includedIds.add(parent.id)
+        current = parent
+      }
+    })
+
+    const authorizedMenus = allActiveMenus.filter(menu => includedIds.has(menu.id))
+    return this.buildMenuTreeFromMenus(authorizedMenus)
+  }
+
+  private buildUserInfo(
+    user: {
+      id: string
+      username: string
+      email: string
+      nickname: string | null
+      avatarUrl: string | null
+      getDisplayRole(): string
+      getPermissionCodes(): string[]
+      getMenuRoutePaths(): string[]
+    },
+    menuTree: AuthMenuTreeNodeDto[]
+  ): AuthUserInfoDto {
     return {
       id: user.id,
       username: user.username,
@@ -451,11 +556,13 @@ export class AuthService {
       nickname: user.nickname,
       avatarUrl: resolvePublicAssetUrl(user.avatarUrl),
       role: user.getDisplayRole(),
-      permissions: user.getPermissionCodes()
+      permissions: user.getPermissionCodes(),
+      menuTree,
+      menuRoutePaths: user.getMenuRoutePaths()
     }
   }
 
-  private toLoginResponseDto(
+  private async toLoginResponseDto(
     tokens: RefreshTokenResponseDto,
     user: {
       id: string
@@ -465,12 +572,15 @@ export class AuthService {
       avatarUrl: string | null
       getDisplayRole(): string
       getPermissionCodes(): string[]
+      getMenuRoutePaths(): string[]
     }
-  ): LoginResponseDto {
+  ): Promise<LoginResponseDto> {
+    const menuTree = await this.buildAuthorizedMenuTree(user)
+
     return {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      userInfo: this.buildUserInfo(user)
+      userInfo: this.buildUserInfo(user, menuTree)
     }
   }
 

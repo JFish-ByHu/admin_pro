@@ -9,6 +9,7 @@ import { RoleModule } from './modules/role/role.module'
 import { MenuModule } from './modules/menu/menu.module'
 import { PermissionResourceModule } from './modules/permission-resource/permission-resource.module'
 import { RbacBootstrapService } from './common/bootstrap/rbac-bootstrap.service'
+import { WsModule } from './common/ws/ws.module'
 import { Role } from './modules/user/entities/role.entity'
 import { Menu } from './modules/menu/entities/menu.entity'
 import { Permission } from './modules/user/entities/permission.entity'
@@ -28,6 +29,7 @@ import { User } from './modules/user/entities/user.entity'
       synchronize: true
     }),
     TypeOrmModule.forFeature([Role, Menu, Permission, User]),
+    WsModule,
     UserModule,
     AuthModule,
     RoleModule,

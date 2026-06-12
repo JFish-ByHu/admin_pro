@@ -41,6 +41,17 @@ export class RefreshTokenResponseDto {
   refreshToken!: string
 }
 
+export class AuthMenuTreeNodeDto {
+  id!: string
+  parentId!: string | null
+  name!: string
+  type!: 'directory' | 'menu'
+  routePath!: string
+  componentPath!: string
+  sort!: number
+  children!: AuthMenuTreeNodeDto[]
+}
+
 export class AuthUserInfoDto {
   id!: string
   username!: string
@@ -49,6 +60,8 @@ export class AuthUserInfoDto {
   avatarUrl!: string | null
   role!: string
   permissions!: string[]
+  menuTree!: AuthMenuTreeNodeDto[]
+  menuRoutePaths!: string[]
 }
 
 export class LoginResponseDto extends RefreshTokenResponseDto {

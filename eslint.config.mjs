@@ -19,12 +19,22 @@ export default tseslint.config(
       },
       sourceType: 'commonjs',
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['scripts/*.cjs']
+        },
         tsconfigRootDir: import.meta.dirname
       }
     }
   },
   {
+    files: ['scripts/**/*.cjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off'
+    }
+  },
+  {
+    files: ['**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-floating-promises': 'warn',
