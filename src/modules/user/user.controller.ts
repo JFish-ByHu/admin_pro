@@ -24,6 +24,7 @@ import { UserService } from './user.service'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
+import { AssignUserRolesDto } from './dto/assign-user-roles.dto'
 import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
 import { success } from '../../common/response/api-response'
 import type { ApiSuccessBody } from '../../common/response/api-response'
@@ -214,5 +215,29 @@ export class UserController {
   async batchDelete(@Body('ids') ids: string[]): Promise<ApiSuccessBody<{ deleted: number }>> {
     const result = await this.userService.batchRemoveUsers(ids)
     return success(result, `成功删除 ${result.deleted} 个用户`)
+  }
+
+  /**
+   * GET /api/users/roleDetail/:id
+   * 查询用户角色分配明细
+   */
+  @Get('roleDetail/:id')
+  @RequirePermissions('system:user:detail')
+  async roleDetail(
+    @Param('id', ParseUUIDPipe) id: string
+  ): Promise<ApiSuccessBody<{ userId: string; roleIds: string[] }>> {
+    const result = await this.userService.getUserRoleDetail(id)
+    return success(result, '查询成功')
+  }
+
+  /**
+   * POST /api/users/assignRoles
+   * 分配用户角色（角色管理主导）
+   */
+  @Post('assignRoles')
+  @RequirePermissions('system:user:update')
+  async assignRoles(@Body() dto: AssignUserRolesDto): Promise<ApiSuccessBody<UserResponseDto>> {
+    const result = await this.userService.assignUserRoles(dto.userId, dto.roleIds)
+    return success(result, '角色分配成功')
   }
 }

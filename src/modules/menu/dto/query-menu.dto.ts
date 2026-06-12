@@ -1,25 +1,19 @@
-import { IsOptional, IsString, Min, IsBoolean, MaxLength, IsIn } from 'class-validator'
+import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, Min } from 'class-validator'
 import { Transform, Type } from 'class-transformer'
-import { IsNumber } from 'class-validator'
 
-export class QueryUserDto {
-  /** 关键词：匹配用户名 / 昵称 / 邮箱 */
+export class QueryMenuDto {
   @IsOptional()
   @IsString()
   keyword?: string
 
-  /** 角色筛选 */
   @IsOptional()
-  @IsString({ message: 'role 必须是字符串' })
-  @MaxLength(50, { message: 'role 最长 50 个字符' })
-  role?: string
+  @IsIn(['directory', 'menu'], { message: 'type 只能是 directory 或 menu' })
+  type?: 'directory' | 'menu'
 
-  /** 状态筛选：enabled / disabled */
   @IsOptional()
   @IsIn(['enabled', 'disabled'], { message: 'status 只能是 enabled 或 disabled' })
   status?: 'enabled' | 'disabled'
 
-  /** 是否查询全部，true 时忽略分页参数 */
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {
     if (value === undefined || value === '') {
@@ -39,7 +33,6 @@ export class QueryUserDto {
   @IsBoolean({ message: 'all 必须是布尔值' })
   all?: boolean
 
-  /** 页码，从 1 开始，默认 1 */
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     value === undefined || value === '' ? undefined : value
@@ -49,7 +42,6 @@ export class QueryUserDto {
   @Min(1, { message: 'page 最小为 1' })
   page?: number
 
-  /** 每页条数，默认 20 */
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     value === undefined || value === '' ? undefined : value

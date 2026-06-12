@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository, In } from 'typeorm'
 import { User } from './entities/user.entity'
+import { Role } from './entities/role.entity'
 import { CreateUserDto } from './dto/create-user.dto'
 import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
@@ -19,12 +20,49 @@ import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
 export class UserService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>
   ) {}
+
+  private readonly rolePriority: string[] = ['super', 'admin', 'operator', 'user']
+
+  private pickDisplayRoleCode(roles: Role[]): string {
+    if (!roles.length) {
+      return 'user'
+    }
+
+    for (const code of this.rolePriority) {
+      if (roles.some(role => role.code === code)) {
+        return code
+      }
+    }
+
+    return roles[0]?.code || 'user'
+  }
+
+  private async ensureDefaultUserRole(): Promise<Role | null> {
+    const role = await this.roleRepository.findOne({ where: { code: 'user', isActive: true } })
+    return role || null
+  }
+
+  private async countActiveSuperUsersExcluding(userId: string): Promise<number> {
+    const count = await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoin('user.roles', 'roleRef')
+      .where('user.id != :userId', { userId })
+      .andWhere('user.isActive = :isActive', { isActive: true })
+      .andWhere('roleRef.code = :code', { code: 'super' })
+      .getCount()
+
+    return count
+  }
 
   private toUserResponseDto(user: User): UserResponseDto {
     const { passwordHash, ...result } = user
     void passwordHash
+
+    const roleIds = (user.roles || []).map(item => item.id)
 
     return {
       id: result.id,
@@ -33,6 +71,7 @@ export class UserService {
       nickname: result.nickname,
       avatarUrl: resolvePublicAssetUrl(result.avatarUrl),
       role: result.role,
+      roleIds,
       isActive: result.isActive,
       createTime: formatDateTime(result.createTime),
       updateTime: formatDateTime(result.updateTime),
@@ -98,6 +137,7 @@ export class UserService {
 
     const qb = this.userRepository
       .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'roleRef')
       .select([
         'user.id',
         'user.username',
@@ -108,7 +148,9 @@ export class UserService {
         'user.isActive',
         'user.createTime',
         'user.updateTime',
-        'user.lastLoginAt'
+        'user.lastLoginAt',
+        'roleRef.id',
+        'roleRef.code'
       ])
 
     if (keyword) {
@@ -118,7 +160,7 @@ export class UserService {
     }
 
     if (role) {
-      qb.andWhere('user.role = :role', { role })
+      qb.andWhere('roleRef.code = :role', { role })
     }
 
     if (status) {
@@ -161,7 +203,8 @@ export class UserService {
         createTime: true,
         updateTime: true,
         lastLoginAt: true
-      }
+      },
+      relations: { roles: true }
     })
 
     if (!user) {
@@ -190,13 +233,25 @@ export class UserService {
       passwordHash,
       nickname: dto.nickname ?? dto.username,
       avatarUrl: dto.avatarUrl,
-      role: dto.role ?? 'user',
+      role: 'user',
       isActive: dto.isActive ?? true
     })
 
     const saved = await this.userRepository.save(user)
 
-    return this.toUserResponseDto(saved)
+    const defaultRole = await this.ensureDefaultUserRole()
+    if (defaultRole) {
+      saved.roles = [defaultRole]
+      saved.role = this.pickDisplayRoleCode(saved.roles)
+      await this.userRepository.save(saved)
+    }
+
+    const latest = await this.findById(saved.id)
+    if (!latest) {
+      throw new NotFoundException(`用户 ${saved.id} 不存在`)
+    }
+
+    return this.toUserResponseDto(latest)
   }
 
   /**
@@ -228,11 +283,73 @@ export class UserService {
     if (normalizedAvatarUrl !== undefined) {
       user.avatarUrl = normalizedAvatarUrl || null
     }
-    if (dto.role !== undefined) user.role = dto.role
     if (dto.isActive !== undefined) user.isActive = dto.isActive
 
     const saved = await this.userRepository.save(user)
+    const latest = await this.findById(saved.id)
+    if (!latest) {
+      throw new NotFoundException(`用户 ${saved.id} 不存在`)
+    }
+
+    return this.toUserResponseDto(latest)
+  }
+
+  async assignUserRoles(userId: string, roleIds: string[]): Promise<UserResponseDto> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { roles: true }
+    })
+
+    if (!user) {
+      throw new NotFoundException(`用户 ${userId} 不存在`)
+    }
+
+    if (roleIds.length === 0) {
+      throw new BadRequestException('用户至少需要绑定一个角色')
+    }
+
+    const roles = await this.roleRepository.findBy({ id: In(roleIds) })
+
+    if (roles.length !== roleIds.length) {
+      throw new BadRequestException('分配角色包含无效 roleId')
+    }
+
+    const hasInactiveRole = roles.some(role => !role.isActive)
+    if (hasInactiveRole) {
+      throw new BadRequestException('不能分配已停用角色')
+    }
+
+    const hadSuperRole = (user.roles || []).some(role => role.code === 'super')
+    const hasSuperRoleAfterAssign = roles.some(role => role.code === 'super')
+
+    if (hadSuperRole && !hasSuperRoleAfterAssign) {
+      const remainSuperUsers = await this.countActiveSuperUsersExcluding(user.id)
+      if (remainSuperUsers < 1) {
+        throw new BadRequestException('系统至少需要保留一个激活的超级管理员用户')
+      }
+    }
+
+    user.roles = roles
+    user.role = this.pickDisplayRoleCode(roles)
+
+    const saved = await this.userRepository.save(user)
     return this.toUserResponseDto(saved)
+  }
+
+  async getUserRoleDetail(userId: string): Promise<{ userId: string; roleIds: string[] }> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { roles: true }
+    })
+
+    if (!user) {
+      throw new NotFoundException(`用户 ${userId} 不存在`)
+    }
+
+    return {
+      userId,
+      roleIds: (user.roles || []).map(item => item.id)
+    }
   }
 
   /**
@@ -265,7 +382,20 @@ export class UserService {
 
   // 内部调用：创建用户（供 AuthService 注册时使用，保持原有签名不变）
   async create(userData: Partial<User>): Promise<User> {
-    const user = this.userRepository.create(userData)
-    return this.userRepository.save(user)
+    const user = this.userRepository.create({
+      ...userData,
+      role: userData.role || 'user'
+    })
+
+    const saved = await this.userRepository.save(user)
+
+    const defaultRole = await this.ensureDefaultUserRole()
+    if (defaultRole) {
+      saved.roles = [defaultRole]
+      saved.role = this.pickDisplayRoleCode(saved.roles)
+      return this.userRepository.save(saved)
+    }
+
+    return saved
   }
 }

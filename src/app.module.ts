@@ -5,6 +5,14 @@ import { AppController } from './app.controller'
 import { AppService } from './app.service'
 import { UserModule } from './modules/user/user.module'
 import { AuthModule } from './modules/auth/auth.module'
+import { RoleModule } from './modules/role/role.module'
+import { MenuModule } from './modules/menu/menu.module'
+import { PermissionResourceModule } from './modules/permission-resource/permission-resource.module'
+import { RbacBootstrapService } from './common/bootstrap/rbac-bootstrap.service'
+import { Role } from './modules/user/entities/role.entity'
+import { Menu } from './modules/menu/entities/menu.entity'
+import { Permission } from './modules/user/entities/permission.entity'
+import { User } from './modules/user/entities/user.entity'
 
 @Module({
   imports: [
@@ -19,10 +27,15 @@ import { AuthModule } from './modules/auth/auth.module'
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true
     }),
+    TypeOrmModule.forFeature([Role, Menu, Permission, User]),
     UserModule,
-    AuthModule
+    AuthModule,
+    RoleModule,
+    MenuModule,
+    PermissionResourceModule
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [AppService, RbacBootstrapService],
+  exports: [RbacBootstrapService]
 })
 export class AppModule {}

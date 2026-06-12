@@ -1,0 +1,11 @@
+import { ArrayUnique, IsArray, IsUUID } from 'class-validator'
+
+export class GrantRoleUsersDto {
+  @IsUUID('4', { message: 'roleId 必须是合法的 UUID' })
+  roleId!: string
+
+  @IsArray({ message: 'userIds 必须是数组' })
+  @ArrayUnique({ message: 'userIds 不能包含重复项' })
+  @IsUUID('4', { each: true, message: 'userIds 存在不合法的 UUID' })
+  userIds!: string[]
+}

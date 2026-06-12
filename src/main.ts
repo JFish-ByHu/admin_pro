@@ -6,6 +6,7 @@ import { AppModule } from './app.module'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
 import { HttpExceptionFilter } from './common/filters/http-exception.filter'
 import { getRequiredEnv } from './common/config/env'
+import { RbacBootstrapService } from './common/bootstrap/rbac-bootstrap.service'
 
 async function bootstrap() {
   getRequiredEnv('JWT_ACCESS_SECRET')
@@ -19,6 +20,7 @@ async function bootstrap() {
     : `${uploadStaticPrefix}/`
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  const rbacBootstrapService = app.get(RbacBootstrapService)
 
   // 设置全局路由前缀（最佳实践）
   app.setGlobalPrefix('api')
@@ -44,6 +46,8 @@ async function bootstrap() {
       forbidNonWhitelisted: false // 不直接报错，而是静默过滤掉多余字段，对前端更友好
     })
   )
+
+  await rbacBootstrapService.bootstrap()
 
   await app.listen(process.env.PORT ?? 3001)
 }

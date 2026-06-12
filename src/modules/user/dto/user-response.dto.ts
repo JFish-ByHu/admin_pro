@@ -5,6 +5,7 @@ export class UserResponseDto {
   nickname!: string | null
   avatarUrl!: string | null
   role!: string
+  roleIds!: string[]
   isActive!: boolean
   createTime!: string
   updateTime!: string

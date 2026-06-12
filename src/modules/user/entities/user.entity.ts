@@ -60,7 +60,14 @@ export class User {
 
   getPermissionCodes(): string[] {
     return Array.from(
-      new Set(this.roles?.flatMap(role => role.permissions?.map(item => item.code) || []) || [])
+      new Set(
+        this.roles
+          ?.filter(role => role.isActive !== false)
+          .flatMap(
+            role =>
+              role.permissions?.filter(item => item.isActive !== false).map(item => item.code) || []
+          ) || []
+      )
     )
   }
 }

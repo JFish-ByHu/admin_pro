@@ -1,12 +1,4 @@
-import {
-  IsString,
-  IsEmail,
-  IsOptional,
-  MinLength,
-  MaxLength,
-  IsIn,
-  IsBoolean
-} from 'class-validator'
+import { IsString, IsEmail, IsOptional, MinLength, MaxLength, IsBoolean } from 'class-validator'
 import { Transform } from 'class-transformer'
 
 export class CreateUserDto {
@@ -37,10 +29,6 @@ export class CreateUserDto {
   @IsString({ message: '头像路径格式不正确' })
   @MaxLength(255, { message: '头像 URL 不能超过 255 位' })
   avatarUrl?: string
-
-  @IsOptional()
-  @IsIn(['super', 'admin', 'operator', 'user'], { message: '角色值不合法' })
-  role?: string
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {
