@@ -2,6 +2,9 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app'
+import { useUserStore } from '@/stores/user'
+import type { UserMenuTreeNode } from '@/types/auth'
+import SidebarMenuNode from './SidebarMenuNode.vue'
 
 defineProps<{
   isCollapse: boolean
@@ -9,7 +12,22 @@ defineProps<{
 
 const route = useRoute()
 const appStore = useAppStore()
+const userStore = useUserStore()
 const activeMenu = computed(() => route.path)
+const sortMenuTree = (nodes: UserMenuTreeNode[]): UserMenuTreeNode[] => {
+  return [...nodes]
+    .sort((a, b) => a.sort - b.sort)
+    .map(node => ({
+      ...node,
+      children: sortMenuTree(node.children || [])
+    }))
+}
+
+const sidebarMenuTree = computed(() => {
+  return sortMenuTree(userStore.menuTree).filter(
+    item => item.type === 'directory' || item.routePath
+  )
+})
 
 // 移动端点击菜单后关闭抽屉
 const selectMenu = () => {
@@ -42,40 +60,7 @@ const selectMenu = () => {
         class="layout-menu"
         @select="selectMenu"
       >
-        <el-menu-item index="/dashboard">
-          <el-icon><i-ep-data-analysis /></el-icon>
-          <template #title>控制台</template>
-        </el-menu-item>
-
-        <el-sub-menu index="/user">
-          <template #title>
-            <el-icon><i-ep-user /></el-icon>
-            <span>用户管理</span>
-          </template>
-          <el-menu-item index="/user/info">
-            <el-icon><i-ep-postcard /></el-icon>
-            <template #title>用户信息</template>
-          </el-menu-item>
-        </el-sub-menu>
-
-        <el-sub-menu index="/system">
-          <template #title>
-            <el-icon><i-ep-setting /></el-icon>
-            <span>系统管理</span>
-          </template>
-          <el-menu-item index="/system/role">
-            <el-icon><i-ep-user-filled /></el-icon>
-            <template #title>角色管理</template>
-          </el-menu-item>
-          <el-menu-item index="/system/menu">
-            <el-icon><i-ep-menu /></el-icon>
-            <template #title>菜单管理</template>
-          </el-menu-item>
-          <el-menu-item index="/system/permission">
-            <el-icon><i-ep-lock /></el-icon>
-            <template #title>权限管理</template>
-          </el-menu-item>
-        </el-sub-menu>
+        <SidebarMenuNode v-for="menuNode in sidebarMenuTree" :key="menuNode.id" :node="menuNode" />
       </el-menu>
     </el-scrollbar>
   </div>

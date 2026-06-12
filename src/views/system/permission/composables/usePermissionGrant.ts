@@ -1,6 +1,7 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import { getRolePermissionGrantDetail, updateRolePermissionGrant } from '@/api/permission'
 import { getRoleSimpleList } from '@/api/role'
+import { useUserStore } from '@/stores/user'
 import { Message } from '@/utils/message'
 import type { MenuAuthSubject } from '@/types/menu'
 import type { PermissionResourceNode } from '@/types/permission'
@@ -22,6 +23,7 @@ const collectAllNodeIds = (nodes: PermissionResourceNode[], ids: string[] = []) 
 }
 
 export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOptions) => {
+  const userStore = useUserStore()
   const subjectKeyword = ref('')
   const subjects = ref<MenuAuthSubject[]>([])
   const selectedSubjectId = ref('')
@@ -86,6 +88,8 @@ export const usePermissionGrant = ({ permissionTreeData }: UsePermissionGrantOpt
         roleId: selectedSubjectId.value,
         permissionIds: checkedPermissionKeys.value
       })
+
+      await userStore.syncCurrentUserInfo({ force: true })
 
       originalCheckedPermissionKeys.value = [...checkedPermissionKeys.value]
 

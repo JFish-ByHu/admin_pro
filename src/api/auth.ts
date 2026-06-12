@@ -12,6 +12,7 @@ import type {
   ResetPasswordParams,
   ResetPasswordResult,
   SendEmailCodeResult,
+  UserInfo,
   VerifyEmailCodeResult
 } from '@/types/auth'
 
@@ -93,6 +94,13 @@ export const emailLogin = (data: EmailLoginParams): Promise<LoginResult> => {
     url: '/auth/emailLogin',
     method: 'post',
     data
+  })
+}
+
+export const getCurrentUserInfo = (): Promise<UserInfo> => {
+  return request({
+    url: '/auth/me',
+    method: 'get'
   })
 }
 

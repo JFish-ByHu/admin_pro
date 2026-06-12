@@ -237,7 +237,11 @@ const submitMenuDialog = async (payload: MenuResourceFormModel) => {
 
     closeMenuDialog()
     selectedRowKeys.value = []
-    await Promise.all([refreshMenuResources(), refreshSubjects()])
+    await Promise.all([
+      refreshMenuResources(),
+      refreshSubjects(),
+      userStore.syncCurrentUserInfo({ force: true })
+    ])
   } finally {
     dialogSubmitting.value = false
   }
@@ -261,7 +265,11 @@ const deleteMenu = (row: MenuResourceTableItem) => {
       pagination.page = Math.min(pagination.page, maxPage)
 
       Message.success('删除成功')
-      await Promise.all([refreshMenuResources(), refreshSubjects()])
+      await Promise.all([
+        refreshMenuResources(),
+        refreshSubjects(),
+        userStore.syncCurrentUserInfo({ force: true })
+      ])
     })
     .catch(err => {
       console.error('Delete Menu Error:', err)
@@ -289,7 +297,11 @@ const deleteSelectedMenus = () => {
       selectedRowKeys.value = []
 
       Message.success(`已删除 ${deleteCount} 个菜单`)
-      await Promise.all([refreshMenuResources(), refreshSubjects()])
+      await Promise.all([
+        refreshMenuResources(),
+        refreshSubjects(),
+        userStore.syncCurrentUserInfo({ force: true })
+      ])
     })
     .catch(err => {
       console.error('Batch Delete Menu Error:', err)
@@ -469,10 +481,9 @@ useContentRefresh(() => refreshTabData())
             :loading="loading"
             :pagination="pagination"
             selectable
-            settings-key="menu-resource-table"
+            settings-key="menu-resource-table-v2"
             show-settings
             configurable-selection
-            configurable-columns
             @page-change="refreshMenuResources"
           >
             <template #header>

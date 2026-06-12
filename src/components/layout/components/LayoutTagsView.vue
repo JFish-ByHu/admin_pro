@@ -5,10 +5,12 @@ import { UseSortable } from '@vueuse/integrations/useSortable/component'
 import { useRoute, useRouter } from 'vue-router'
 import type { Options as SortableOptions } from 'sortablejs'
 import { useAppStore } from '@/stores/app'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const userStore = useUserStore()
 const { visitedViews } = storeToRefs(appStore)
 
 const activePath = computed(() => route.path)
@@ -48,15 +50,44 @@ const closeTag = (path: string) => {
   }
 }
 
+const keepAccessibleTags = () => {
+  const beforeLength = visitedViews.value.length
+
+  visitedViews.value = visitedViews.value.filter(item => {
+    const resolved = router.resolve(item.path)
+    return resolved.name !== 'NotFound'
+  })
+
+  if (visitedViews.value.length === 0) {
+    visitedViews.value = [
+      {
+        path: route.path,
+        title: (route.meta.title as string) || '未命名页面',
+        name: typeof route.name === 'string' ? route.name : undefined
+      }
+    ]
+  }
+
+  const firstView = visitedViews.value[0]
+  if (beforeLength !== visitedViews.value.length && firstView && route.path !== firstView.path) {
+    router.push(firstView.path)
+  }
+}
+
 watch(
   () => route.path,
   () => {
     appStore.addVisitedView(route)
+    keepAccessibleTags()
   },
   {
     immediate: true
   }
 )
+
+watch([() => userStore.hasMenuRouteControl, () => JSON.stringify(userStore.menuTree)], () => {
+  keepAccessibleTags()
+})
 </script>
 
 <template>

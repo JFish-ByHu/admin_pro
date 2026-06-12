@@ -83,6 +83,17 @@ export interface EncryptKeyResult {
   aesKey: string
 }
 
+export interface UserMenuTreeNode {
+  id: string
+  parentId: string | null
+  name: string
+  type: 'directory' | 'menu'
+  routePath: string
+  componentPath: string
+  sort: number
+  children: UserMenuTreeNode[]
+}
+
 /**
  * 用户信息
  */
@@ -94,6 +105,8 @@ export interface UserInfo {
   avatarUrl?: string
   role: string
   permissions?: string[] // 新增权限标识数组
+  menuTree?: UserMenuTreeNode[]
+  menuRoutePaths?: string[]
 }
 
 /**

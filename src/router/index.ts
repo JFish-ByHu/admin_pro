@@ -1,56 +1,158 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import NProgress from 'nprogress'
 import { useUserStore } from '@/stores/user'
+import { disconnectWs, ensureWsConnected, subscribeRbacChanged } from '@/services/ws'
+import type { UserMenuTreeNode } from '@/types/auth'
+
+const ROOT_ROUTE_NAME = 'RootLayout'
+
+const viewModules = import.meta.glob('/src/views/**/*.vue')
+
+let dynamicRouteNames: string[] = []
+let dynamicRoutePaths: string[] = []
+let currentPermissionSignature = ''
+let isWsSubscriptionReady = false
+
+const setupWsSubscription = () => {
+  if (isWsSubscriptionReady) {
+    return
+  }
+
+  subscribeRbacChanged(async () => {
+    const userStore = useUserStore()
+    if (!userStore.accessToken) {
+      return
+    }
+
+    try {
+      await userStore.syncCurrentUserInfo({ force: true })
+      await router.replace(router.currentRoute.value.fullPath)
+    } catch (error) {
+      console.error('[ws] RBAC 变更同步失败:', error)
+    }
+  })
+
+  isWsSubscriptionReady = true
+}
+
+const normalizeRoutePath = (routePath: string) => {
+  if (!routePath) {
+    return ''
+  }
+
+  return routePath.startsWith('/') ? routePath.slice(1) : routePath
+}
+
+const flattenMenuTree = (nodes: UserMenuTreeNode[]): UserMenuTreeNode[] => {
+  return nodes.flatMap(node => [node, ...flattenMenuTree(node.children || [])])
+}
+
+const buildMenuTreeSignature = (menuTree: UserMenuTreeNode[]) => {
+  return JSON.stringify(menuTree)
+}
+
+const collectMenuRoutePaths = (menuTree: UserMenuTreeNode[]) => {
+  return Array.from(
+    new Set(
+      flattenMenuTree(menuTree)
+        .map(item => item.routePath)
+        .filter(routePath => Boolean(routePath))
+    )
+  )
+}
+
+const resolveViewComponent = (componentPath: string): RouteRecordRaw['component'] | null => {
+  const normalizedPath = componentPath.trim().replace(/^\/+/, '')
+  if (!normalizedPath) {
+    return null
+  }
+
+  const moduleKey = `/src/${normalizedPath}`
+  const loader = viewModules[moduleKey]
+  return loader || null
+}
+
+const buildDynamicChildRoutes = (menuTree: UserMenuTreeNode[]): RouteRecordRaw[] => {
+  const routes: RouteRecordRaw[] = []
+
+  flattenMenuTree(menuTree)
+    .filter(item => item.type === 'menu')
+    .forEach(item => {
+      const routePath = item.routePath?.trim() || ''
+      if (!routePath) {
+        return
+      }
+
+      const component = resolveViewComponent(item.componentPath || '')
+      if (!component) {
+        console.warn(`[router] 未找到组件映射? ${item.componentPath} (${item.routePath})`)
+        return
+      }
+
+      routes.push({
+        path: normalizeRoutePath(routePath),
+        name: `Menu_${item.id.replace(/-/g, '_')}`,
+        component,
+        meta: {
+          title: item.name,
+          menuPath: routePath
+        }
+      })
+    })
+
+  return routes
+}
+
+const resetDynamicRoutes = () => {
+  dynamicRouteNames.forEach(name => {
+    if (router.hasRoute(name)) {
+      router.removeRoute(name)
+    }
+  })
+
+  dynamicRouteNames = []
+  dynamicRoutePaths = []
+  currentPermissionSignature = ''
+}
+
+const ensureDynamicRoutes = (menuTree: UserMenuTreeNode[]) => {
+  const nextSignature = buildMenuTreeSignature(menuTree)
+  if (nextSignature === currentPermissionSignature && dynamicRouteNames.length > 0) {
+    return
+  }
+
+  resetDynamicRoutes()
+
+  const dynamicChildRoutes = buildDynamicChildRoutes(menuTree)
+  dynamicRoutePaths = collectMenuRoutePaths(menuTree)
+
+  dynamicChildRoutes.forEach(route => {
+    const menuPath = (route.meta as { menuPath?: string } | undefined)?.menuPath
+
+    router.addRoute(ROOT_ROUTE_NAME, route)
+
+    if (typeof route.name === 'string') {
+      dynamicRouteNames.push(route.name)
+    }
+
+    if (menuPath && !dynamicRoutePaths.includes(menuPath)) {
+      dynamicRoutePaths.push(menuPath)
+    }
+  })
+
+  currentPermissionSignature = nextSignature
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
+      name: ROOT_ROUTE_NAME,
       component: () => import('@/components/layout/LayoutIndex.vue'),
       redirect: '/dashboard',
-      children: [
-        {
-          path: 'dashboard',
-          name: 'Dashboard',
-          component: () => import('@/views/dashboard/DashboardIndex.vue'),
-          meta: {
-            title: '控制台'
-          }
-        },
-        {
-          path: 'user/info',
-          name: 'UserInfo',
-          component: () => import('@/views/user/UserInfoIndex.vue'),
-          meta: {
-            title: '用户信息'
-          }
-        },
-        {
-          path: 'system/role',
-          name: 'SystemRole',
-          component: () => import('@/views/system/role/RoleManagementIndex.vue'),
-          meta: {
-            title: '角色管理'
-          }
-        },
-        {
-          path: 'system/menu',
-          name: 'SystemMenu',
-          component: () => import('@/views/system/menu/MenuManagementIndex.vue'),
-          meta: {
-            title: '菜单管理'
-          }
-        },
-        {
-          path: 'system/permission',
-          name: 'SystemPermission',
-          component: () => import('@/views/system/permission/PermissionManagementIndex.vue'),
-          meta: {
-            title: '权限管理'
-          }
-        }
-      ]
+      children: []
     },
     {
       path: '/auth',
@@ -96,7 +198,7 @@ const router = createRouter({
 })
 
 // 全局前置守卫：权限拦截与进度条
-router.beforeEach(to => {
+router.beforeEach(async to => {
   NProgress.start()
 
   const userStore = useUserStore()
@@ -107,12 +209,47 @@ router.beforeEach(to => {
   const isWhiteList = whiteList.includes(to.path) || to.path.startsWith('/legal/')
 
   if (hasToken) {
+    setupWsSubscription()
+    ensureWsConnected(userStore.accessToken)
+
+    try {
+      await userStore.syncCurrentUserInfo({ maxAgeMs: 3000 })
+    } catch (error) {
+      console.error('[router] 同步当前用户信息失败:', error)
+      userStore.logout()
+      disconnectWs()
+      return { path: '/401', query: { redirect: to.fullPath } }
+    }
+
+    ensureDynamicRoutes(userStore.menuTree)
+
+    if (to.path === '/') {
+      const defaultPath = dynamicRoutePaths[0] || '/403'
+      return { path: defaultPath }
+    }
+
+    if (to.name === 'NotFound') {
+      const matchedRoute = router.resolve(to.fullPath)
+      if (matchedRoute.name !== 'NotFound') {
+        return to.fullPath
+      }
+    }
+
+    const isProtectedPath = to.path.startsWith('/') && !to.path.startsWith('/legal/')
+
+    if (to.name === 'NotFound' && isProtectedPath) {
+      return { path: '/403' }
+    }
+
     if (to.path === '/auth') {
       return { path: '/' }
     }
 
     return true
   } else {
+    resetDynamicRoutes()
+    disconnectWs()
+
     if (isWhiteList) {
       return true
     }

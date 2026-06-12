@@ -44,6 +44,10 @@ const emit = defineEmits<{
 const currentEmptyText = computed(() => {
   return props.keyword.trim() ? props.emptySearchText : props.emptyText
 })
+
+const updateKeyword = (value: unknown) => {
+  emit('update:keyword', String(value || ''))
+}
 </script>
 
 <template>
@@ -57,7 +61,7 @@ const currentEmptyText = computed(() => {
       :model-value="keyword"
       :placeholder="placeholder"
       clearable
-      @update:model-value="value => emit('update:keyword', String(value || ''))"
+      @update:model-value="updateKeyword"
     >
       <template #prefix>
         <el-icon><i-ep-search /></el-icon>

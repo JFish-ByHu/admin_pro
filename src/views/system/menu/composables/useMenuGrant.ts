@@ -1,6 +1,8 @@
 import { computed, ref, watch, type Ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getRoleMenuGrantDetail, updateRoleMenuGrant } from '@/api/menu'
 import { getRoleSimpleList } from '@/api/role'
+import { useUserStore } from '@/stores/user'
 import { Message } from '@/utils/message'
 import type { MenuAuthSubject, MenuResourceNode } from '@/types/menu'
 
@@ -21,6 +23,9 @@ const collectAllNodeIds = (nodes: MenuResourceNode[], ids: string[] = []) => {
 }
 
 export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
+  const route = useRoute()
+  const router = useRouter()
+  const userStore = useUserStore()
   const subjectKeyword = ref('')
   const subjects = ref<MenuAuthSubject[]>([])
   const selectedSubjectId = ref('')
@@ -85,6 +90,9 @@ export const useMenuGrant = ({ menuTreeData }: UseMenuGrantOptions) => {
         roleId: selectedSubjectId.value,
         menuIds: checkedMenuKeys.value
       })
+
+      await userStore.syncCurrentUserInfo({ force: true })
+      await router.replace(route.fullPath)
 
       originalCheckedMenuKeys.value = [...checkedMenuKeys.value]
 

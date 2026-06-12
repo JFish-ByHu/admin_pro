@@ -1,5 +1,5 @@
 import { computed, reactive, ref } from 'vue'
-import { getMenuResourceList, getMenuResourceTree } from '@/api/menu'
+import { getMenuResourceTree } from '@/api/menu'
 import type { TableFilterField } from '@/components/common/CommonTableFilter.vue'
 import type { TablePagination } from '@/components/common/CommonTable.vue'
 import type {
@@ -56,48 +56,69 @@ export const useMenuResourceList = () => {
 
   const menuTreeData = computed(() => sourceMenuTree.value)
 
-  const menuLevelMap = computed(() => {
-    const levelMap = new Map<string, number>()
-
-    const travel = (nodes: MenuResourceNode[], level: number) => {
-      nodes.forEach(node => {
-        levelMap.set(node.id, level)
-
-        if (node.children?.length) {
-          travel(node.children, level + 1)
+  const getTreeTableRows = (nodes: MenuResourceNode[], level = 0): MenuResourceTableItem[] => {
+    return nodes
+      .slice()
+      .sort((a, b) => a.sort - b.sort)
+      .flatMap(node => {
+        const currentRow: MenuResourceTableItem = {
+          id: node.id,
+          parentId: node.parentId,
+          level,
+          name: node.name,
+          type: node.type,
+          routePath: node.routePath,
+          componentPath: node.componentPath,
+          status: node.status,
+          sort: node.sort,
+          createTime: node.createTime,
+          updateTime: node.updateTime
         }
+
+        const children = node.children?.length ? getTreeTableRows(node.children, level + 1) : []
+        return [currentRow, ...children]
       })
+  }
+
+  const isRowMatched = (row: MenuResourceTableItem) => {
+    const keyword = query.value.keyword.trim().toLowerCase()
+
+    if (query.value.type && row.type !== query.value.type) {
+      return false
     }
 
-    travel(sourceMenuTree.value, 0)
-    return levelMap
-  })
+    if (query.value.status && row.status !== query.value.status) {
+      return false
+    }
+
+    if (!keyword) {
+      return true
+    }
+
+    return [row.name, row.routePath, row.componentPath]
+      .filter(Boolean)
+      .some(value => value.toLowerCase().includes(keyword))
+  }
 
   const getMenuResources = async () => {
     loading.value = true
 
     try {
-      const [listResult, treeResult] = await Promise.all([
-        getMenuResourceList({
-          keyword: query.value.keyword || undefined,
-          type: query.value.type || undefined,
-          status: query.value.status || undefined,
-          page: pagination.page,
-          pageSize: pagination.pageSize
-        }),
-        getMenuResourceTree()
-      ])
+      const treeResult = await getMenuResourceTree()
 
       sourceMenuTree.value = treeResult
 
-      tableData.value = listResult.list.map(item => ({
-        ...item,
-        level: menuLevelMap.value.get(item.id) || 0
-      }))
+      const allRows = getTreeTableRows(sourceMenuTree.value)
+      const filteredRows = allRows.filter(isRowMatched)
 
-      pagination.total = listResult.total
-      pagination.page = listResult.page
-      pagination.pageSize = listResult.pageSize
+      pagination.total = filteredRows.length
+
+      const maxPage = Math.max(1, Math.ceil(filteredRows.length / pagination.pageSize))
+      pagination.page = Math.min(pagination.page, maxPage)
+
+      const startIndex = (pagination.page - 1) * pagination.pageSize
+      const endIndex = startIndex + pagination.pageSize
+      tableData.value = filteredRows.slice(startIndex, endIndex)
     } finally {
       loading.value = false
     }

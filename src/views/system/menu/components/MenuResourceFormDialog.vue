@@ -38,11 +38,40 @@ const formRules: FormRules<MenuResourceFormModel> = {
   ],
   type: [{ required: true, message: '请选择菜单类型', trigger: 'change' }],
   routePath: [
-    { required: true, message: '请输入路由路径', trigger: 'blur' },
+    {
+      validator: (_, value, callback) => {
+        const routePath = (value || '').trim()
+
+        if (localFormModel.value.type === 'menu' && !routePath) {
+          callback(new Error('菜单类型必须填写路由路径'))
+          return
+        }
+
+        if (routePath && !routePath.startsWith('/')) {
+          callback(new Error('路由路径需以 / 开头'))
+          return
+        }
+
+        callback()
+      },
+      trigger: 'blur'
+    },
     { max: 255, message: '路由路径最多 255 字符', trigger: 'blur' }
   ],
   componentPath: [
-    { required: true, message: '请输入组件路径', trigger: 'blur' },
+    {
+      validator: (_, value, callback) => {
+        const componentPath = (value || '').trim()
+
+        if (localFormModel.value.type === 'menu' && !componentPath) {
+          callback(new Error('菜单类型必须填写组件路径'))
+          return
+        }
+
+        callback()
+      },
+      trigger: 'blur'
+    },
     { max: 255, message: '组件路径最多 255 字符', trigger: 'blur' }
   ]
 }
@@ -97,6 +126,22 @@ watch(
   },
   { immediate: true }
 )
+
+watch(
+  () => localFormModel.value.type,
+  async value => {
+    if (value !== 'directory') {
+      return
+    }
+
+    if (localFormModel.value.componentPath) {
+      localFormModel.value.componentPath = ''
+    }
+
+    await nextTick()
+    formRef.value?.clearValidate(['componentPath'])
+  }
+)
 </script>
 
 <template>
@@ -145,8 +190,16 @@ watch(
         </el-col>
 
         <el-col :xs="24" :sm="12">
-          <el-form-item label="路由路径" prop="routePath">
-            <el-input v-model="localFormModel.routePath" placeholder="如 /system/menu" />
+          <el-form-item
+            :label="localFormModel.type === 'menu' ? '路由路径 *' : '路由路径'"
+            prop="routePath"
+          >
+            <el-input
+              v-model="localFormModel.routePath"
+              :placeholder="
+                localFormModel.type === 'menu' ? '如 /system/menu' : '目录可选，如 /system'
+              "
+            />
           </el-form-item>
         </el-col>
 
@@ -163,10 +216,18 @@ watch(
         </el-col>
 
         <el-col :xs="24">
-          <el-form-item label="组件路径" prop="componentPath">
+          <el-form-item
+            :label="localFormModel.type === 'menu' ? '组件路径 *' : '组件路径'"
+            prop="componentPath"
+          >
             <el-input
               v-model="localFormModel.componentPath"
-              placeholder="如 views/system/menu/MenuManagementIndex.vue"
+              :placeholder="
+                localFormModel.type === 'menu'
+                  ? '如 views/system/menu/MenuManagementIndex.vue'
+                  : '目录无需填写，已自动清空'
+              "
+              :disabled="localFormModel.type === 'directory'"
             />
           </el-form-item>
         </el-col>
