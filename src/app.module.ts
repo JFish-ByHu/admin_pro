@@ -14,6 +14,7 @@ import { Role } from './modules/user/entities/role.entity'
 import { Menu } from './modules/menu/entities/menu.entity'
 import { Permission } from './modules/user/entities/permission.entity'
 import { User } from './modules/user/entities/user.entity'
+import { LoggingModule } from './modules/logging/logging.module'
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { User } from './modules/user/entities/user.entity'
     AuthModule,
     RoleModule,
     MenuModule,
-    PermissionResourceModule
+    PermissionResourceModule,
+    LoggingModule
   ],
   controllers: [AppController],
   providers: [AppService, RbacBootstrapService],

@@ -42,6 +42,11 @@ export const ROLE_PERMISSION_CODES = {
   DELETE: 'system:role:delete'
 } as const
 
+export const LOG_PERMISSION_CODES = {
+  LIST: 'system:log:list',
+  DETAIL: 'system:log:detail'
+} as const
+
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { code: USER_PERMISSION_CODES.LIST, name: '用户列表', type: 'api', sort: 1 },
   {
@@ -172,6 +177,14 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
     type: 'button',
     sort: 22,
     parentCode: ROLE_PERMISSION_CODES.LIST
+  },
+  { code: LOG_PERMISSION_CODES.LIST, name: '日志列表', type: 'api', sort: 30 },
+  {
+    code: LOG_PERMISSION_CODES.DETAIL,
+    name: '日志详情',
+    type: 'api',
+    sort: 31,
+    parentCode: LOG_PERMISSION_CODES.LIST
   }
 ]
 

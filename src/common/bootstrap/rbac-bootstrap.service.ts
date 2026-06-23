@@ -251,6 +251,8 @@ export class RbacBootstrapService {
         name: seed.name,
         type: seed.type,
         componentPath: seed.componentPath,
+        icon: current.icon,
+        isActive: current.isActive,
         sort: seed.sort
       })
 

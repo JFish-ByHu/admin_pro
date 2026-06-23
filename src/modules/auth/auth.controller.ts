@@ -34,6 +34,7 @@ import {
   VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
 import { PasswordDecryptInterceptor } from '../../common/interceptors/password-decrypt.interceptor'
+import { LogAction } from '../logging/log-action.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -109,12 +110,14 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(PasswordDecryptInterceptor)
+  @LogAction('认证', '登录')
   async login(@Body() loginDto: LoginDto): Promise<ApiSuccessBody<LoginResponseDto>> {
     return success(await this.authService.login(loginDto))
   }
 
   @Post('emailLogin')
   @HttpCode(HttpStatus.OK)
+  @LogAction('认证', '邮箱登录')
   async emailLogin(@Body() dto: EmailLoginDto): Promise<ApiSuccessBody<LoginResponseDto>> {
     return success(await this.authService.emailLogin(dto))
   }

@@ -31,6 +31,7 @@ import type { ApiSuccessBody } from '../../common/response/api-response'
 import { RequirePermissions } from '../../common/decorators/permissions.decorator'
 import { PermissionsGuard } from '../../common/guards/permissions.guard'
 import { USER_PERMISSION_CODES } from '../../common/rbac/permission-registry'
+import { LogAction } from '../logging/log-action.decorator'
 
 const UPLOAD_ROOT_DIR = process.env.UPLOAD_ROOT_DIR || 'upload'
 const UPLOAD_AVATAR_DIR = process.env.UPLOAD_AVATAR_DIR || 'avatars'
@@ -84,7 +85,7 @@ export class UserController {
   @RequirePermissions(USER_PERMISSION_CODES.LIST)
   async list(@Query() query: QueryUserDto): Promise<ApiSuccessBody<UserListResponseDto>> {
     const result = await this.userService.findAll(query)
-    return success(result, '查询成功')
+    return success(result, 'success')
   }
 
   /**
@@ -95,7 +96,7 @@ export class UserController {
   @RequirePermissions(USER_PERMISSION_CODES.DETAIL)
   async detail(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.findOne(id)
-    return success(user, '查询成功')
+    return success(user, 'success')
   }
 
   /**
@@ -104,6 +105,7 @@ export class UserController {
    */
   @Post('add')
   @RequirePermissions(USER_PERMISSION_CODES.CREATE)
+  @LogAction('用户管理', '新增')
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
@@ -113,7 +115,7 @@ export class UserController {
   )
   async add(@Body() dto: CreateUserDto): Promise<ApiSuccessBody<UserResponseDto>> {
     const user = await this.userService.createUser(dto)
-    return success(user, '用户创建成功')
+    return success(user, 'success')
   }
 
   /**
@@ -122,6 +124,7 @@ export class UserController {
    */
   @Patch('update/:id')
   @RequirePermissions(USER_PERMISSION_CODES.UPDATE)
+  @LogAction('用户管理', '修改')
   @UseInterceptors(
     FileInterceptor('avatar', {
       limits: { fileSize: AVATAR_MAX_SIZE }
@@ -186,7 +189,7 @@ export class UserController {
         }
       }
 
-      return success(user, '用户更新成功')
+      return success(user, 'success')
     } catch (error) {
       if (newAvatarAbsolutePath) {
         await unlink(newAvatarAbsolutePath).catch(() => undefined)
@@ -202,9 +205,10 @@ export class UserController {
    */
   @Delete('delete/:id')
   @RequirePermissions(USER_PERMISSION_CODES.DELETE)
+  @LogAction('用户管理', '删除')
   async delete(@Param('id', ParseUUIDPipe) id: string): Promise<ApiSuccessBody<null>> {
     await this.userService.removeUser(id)
-    return success(null, '用户删除成功')
+    return success(null, 'success')
   }
 
   /**
@@ -213,9 +217,10 @@ export class UserController {
    */
   @Delete('batchDelete')
   @RequirePermissions(USER_PERMISSION_CODES.DELETE)
+  @LogAction('用户管理', '批量删除')
   async batchDelete(@Body('ids') ids: string[]): Promise<ApiSuccessBody<{ deleted: number }>> {
     const result = await this.userService.batchRemoveUsers(ids)
-    return success(result, `成功删除 ${result.deleted} 个用户`)
+    return success(result, 'success')
   }
 
   /**
@@ -228,7 +233,7 @@ export class UserController {
     @Param('id', ParseUUIDPipe) id: string
   ): Promise<ApiSuccessBody<{ userId: string; roleIds: string[] }>> {
     const result = await this.userService.getUserRoleDetail(id)
-    return success(result, '查询成功')
+    return success(result, 'success')
   }
 
   /**
@@ -237,8 +242,9 @@ export class UserController {
    */
   @Post('assignRoles')
   @RequirePermissions(USER_PERMISSION_CODES.UPDATE)
+  @LogAction('用户管理', '角色分配')
   async assignRoles(@Body() dto: AssignUserRolesDto): Promise<ApiSuccessBody<UserResponseDto>> {
     const result = await this.userService.assignUserRoles(dto.userId, dto.roleIds)
-    return success(result, '角色分配成功')
+    return success(result, 'success')
   }
 }
