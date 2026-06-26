@@ -192,10 +192,7 @@ export class RbacBootstrapService {
 
       await this.permissionRepository.save({
         ...current,
-        parentId: nextParentId,
-        name: seed.name,
-        type: seed.type,
-        sort: seed.sort
+        parentId: nextParentId
       })
       this.logger.log(`已同步权限定义: ${seed.code}`)
     }
@@ -210,8 +207,11 @@ export class RbacBootstrapService {
         continue
       }
 
+      const parentMenu = seed.parentRoutePath ? menuMap.get(seed.parentRoutePath) : null
+      const parentId = parentMenu?.id || null
+
       const menu = this.menuRepository.create({
-        parentId: null,
+        parentId,
         name: seed.name,
         type: seed.type,
         routePath: seed.routePath,
@@ -223,41 +223,6 @@ export class RbacBootstrapService {
       const saved = await this.menuRepository.save(menu)
       menuMap.set(saved.routePath, saved)
       this.logger.log(`已初始化菜单: ${seed.routePath}`)
-    }
-
-    for (const seed of this.menuSeeds) {
-      const current = menuMap.get(seed.routePath)
-      if (!current) {
-        continue
-      }
-
-      const parentMenu = seed.parentRoutePath ? menuMap.get(seed.parentRoutePath) : null
-      const nextParentId = parentMenu?.id || null
-
-      const needSync =
-        current.parentId !== nextParentId ||
-        current.name !== seed.name ||
-        current.type !== seed.type ||
-        current.componentPath !== seed.componentPath ||
-        current.sort !== seed.sort
-
-      if (!needSync) {
-        continue
-      }
-
-      const updated = await this.menuRepository.save({
-        ...current,
-        parentId: nextParentId,
-        name: seed.name,
-        type: seed.type,
-        componentPath: seed.componentPath,
-        icon: current.icon,
-        isActive: current.isActive,
-        sort: seed.sort
-      })
-
-      menuMap.set(updated.routePath, updated)
-      this.logger.log(`已同步菜单定义: ${seed.routePath}`)
     }
   }
 
