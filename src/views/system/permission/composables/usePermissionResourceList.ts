@@ -1,5 +1,5 @@
 import { computed, reactive, ref } from 'vue'
-import { getPermissionResourceList, getPermissionResourceTree } from '@/api/permission'
+import { getPermissionResourceTree } from '@/api/permission'
 import type { TableFilterField } from '@/components/common/CommonTableFilter.vue'
 import type { TablePagination } from '@/components/common/CommonTable.vue'
 import type {
@@ -56,48 +56,73 @@ export const usePermissionResourceList = () => {
 
   const permissionTreeData = computed(() => sourcePermissionTree.value)
 
-  const permissionLevelMap = computed(() => {
-    const levelMap = new Map<string, number>()
-
-    const travel = (nodes: PermissionResourceNode[], level: number) => {
-      nodes.forEach(node => {
-        levelMap.set(node.id, level)
-
-        if (node.children?.length) {
-          travel(node.children, level + 1)
+  const getTreeTableRows = (
+    nodes: PermissionResourceNode[],
+    level = 0
+  ): PermissionResourceTableItem[] => {
+    return nodes
+      .slice()
+      .sort((a, b) => a.sort - b.sort)
+      .flatMap(node => {
+        const currentRow: PermissionResourceTableItem = {
+          id: node.id,
+          parentId: node.parentId,
+          level,
+          name: node.name,
+          type: node.type,
+          permissionCode: node.permissionCode,
+          apiPath: node.apiPath,
+          httpMethod: node.httpMethod,
+          status: node.status,
+          sort: node.sort,
+          createTime: node.createTime,
+          updateTime: node.updateTime
         }
+
+        const children = node.children?.length ? getTreeTableRows(node.children, level + 1) : []
+        return [currentRow, ...children]
       })
+  }
+
+  const isRowMatched = (row: PermissionResourceTableItem) => {
+    const keyword = query.value.keyword.trim().toLowerCase()
+
+    if (query.value.type && row.type !== query.value.type) {
+      return false
     }
 
-    travel(sourcePermissionTree.value, 0)
-    return levelMap
-  })
+    if (query.value.status && row.status !== query.value.status) {
+      return false
+    }
+
+    if (!keyword) {
+      return true
+    }
+
+    return [row.name, row.permissionCode, row.apiPath]
+      .filter(Boolean)
+      .some(value => value.toLowerCase().includes(keyword))
+  }
 
   const getPermissionResources = async () => {
     loading.value = true
 
     try {
-      const [listResult, treeResult] = await Promise.all([
-        getPermissionResourceList({
-          keyword: query.value.keyword || undefined,
-          type: query.value.type || undefined,
-          status: query.value.status || undefined,
-          page: pagination.page,
-          pageSize: pagination.pageSize
-        }),
-        getPermissionResourceTree()
-      ])
+      const treeResult = await getPermissionResourceTree()
 
       sourcePermissionTree.value = treeResult
 
-      tableData.value = listResult.list.map(item => ({
-        ...item,
-        level: permissionLevelMap.value.get(item.id) || 0
-      }))
+      const allRows = getTreeTableRows(sourcePermissionTree.value)
+      const filteredRows = allRows.filter(isRowMatched)
 
-      pagination.total = listResult.total
-      pagination.page = listResult.page
-      pagination.pageSize = listResult.pageSize
+      pagination.total = filteredRows.length
+
+      const maxPage = Math.max(1, Math.ceil(filteredRows.length / pagination.pageSize))
+      pagination.page = Math.min(pagination.page, maxPage)
+
+      const startIndex = (pagination.page - 1) * pagination.pageSize
+      const endIndex = startIndex + pagination.pageSize
+      tableData.value = filteredRows.slice(startIndex, endIndex)
     } finally {
       loading.value = false
     }
@@ -120,6 +145,7 @@ export const usePermissionResourceList = () => {
   }
 
   const refreshPermissionResources = async () => {
+    pagination.page = 1
     await getPermissionResources()
   }
 

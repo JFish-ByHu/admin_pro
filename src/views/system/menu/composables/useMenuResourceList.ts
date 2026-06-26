@@ -142,6 +142,7 @@ export const useMenuResourceList = () => {
   }
 
   const refreshMenuResources = async () => {
+    pagination.page = 1
     await getMenuResources()
   }
 

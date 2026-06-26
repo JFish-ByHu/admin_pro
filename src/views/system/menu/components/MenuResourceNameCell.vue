@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { MenuResourceTableItem } from '@/types/menu'
 
 const props = defineProps<{
   row: MenuResourceTableItem
 }>()
 
-const namePaddingLeft = `${props.row.level * 18}px`
+const namePaddingLeft = computed(() => `${props.row.level * 18}px`)
 </script>
 
 <template>

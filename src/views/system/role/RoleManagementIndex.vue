@@ -22,6 +22,7 @@ const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingRoleId = ref('')
 const grantDialogVisible = ref(false)
+const isTableRowSortable = ref(false)
 const grantRole = ref<RoleInfo | null>(null)
 
 const userStore = useUserStore()
@@ -452,6 +453,7 @@ useContentRefresh(() => refreshData())
       v-model:page="pagination.page"
       v-model:page-size="pagination.pageSize"
       v-model:selected-row-keys="selectedRowKeys"
+      v-model:row-sortable="isTableRowSortable"
       :columns="roleColumns"
       :data="tableData"
       :loading="loading"
@@ -461,7 +463,9 @@ useContentRefresh(() => refreshData())
       show-settings
       configurable-selection
       configurable-columns
+      configurable-row-sortable
       @page-change="refreshRoleList"
+      @row-reorder="() => {}"
     >
       <template #header>
         <CommonTableToolbar

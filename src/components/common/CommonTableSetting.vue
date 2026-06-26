@@ -83,13 +83,15 @@ const updateSelectionEnabled = (value: string | number | boolean) => {
           class="common-table-setting__section"
         >
           <div class="common-table-setting__heading">功能设置</div>
-          <div class="common-table-setting__option common-table-setting__option--switch">
+          <div
+            v-if="showRowSortableSwitch"
+            class="common-table-setting__option common-table-setting__option--switch"
+          >
             <div>
               <div class="common-table-setting__label">开启拖拽排序</div>
               <div class="common-table-setting__desc">关闭后隐藏拖拽列，表格恢复普通浏览模式</div>
             </div>
             <el-switch
-              v-if="showRowSortableSwitch"
               :model-value="rowSortableEnabled"
               @update:model-value="updateRowSortableEnabled"
             />

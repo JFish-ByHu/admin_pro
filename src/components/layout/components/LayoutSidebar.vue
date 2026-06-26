@@ -130,9 +130,13 @@ const selectMenu = () => {
       border-right: none;
       background-color: transparent;
 
+      :deep(.el-sub-menu .el-menu .el-menu-item) {
+        padding-left: 48px;
+      }
+
       :deep(.el-menu-item),
       :deep(.el-sub-menu__title) {
-        height: 44px;
+        height: 50px;
         line-height: 44px;
         border-radius: var(--radius-md);
         margin-bottom: var(--space-1);

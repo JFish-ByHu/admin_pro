@@ -39,6 +39,7 @@ const activeTab = defineModel<'resource' | 'grant'>('activeTab', {
 const userStore = useUserStore()
 const selectedRowKeys = ref<Array<string | number>>([])
 const dialogVisible = ref(false)
+const isTableRowSortable = ref(false)
 const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingPermissionId = ref('')
@@ -305,15 +306,18 @@ const deleteSelectedPermissions = () => {
     })
 }
 
+const statusTagConfigMap = {
+  enabled: { label: '启用', type: 'success' },
+  disabled: { label: '禁用', type: 'info' }
+} as const
+
 const permissionTypeTagConfigMap = {
   api: { label: '接口', type: 'danger' },
   button: { label: '按钮', type: 'info' }
 } as const
 
-const statusTagConfigMap = {
-  enabled: { label: '启用', type: 'success' },
-  disabled: { label: '禁用', type: 'info' }
-} as const
+const getPermissionNodeTagInfo = (data: unknown) =>
+  permissionTypeTagConfigMap[(data as PermissionResourceNode).type]
 
 const resourceColumns: CommonTableColumn[] = [
   {
@@ -330,17 +334,6 @@ const resourceColumns: CommonTableColumn[] = [
     title: '权限名称',
     minWidth: 260,
     cellRenderer: ({ rowData }) => h(PermissionResourceNameCell, { row: toPermissionRow(rowData) })
-  },
-  {
-    key: 'type',
-    dataKey: 'type',
-    title: '类型',
-    width: 120,
-    align: 'center',
-    cellRenderer: ({ rowData }) => {
-      const config = permissionTypeTagConfigMap[toPermissionRow(rowData).type]
-      return h(ElTag, { type: config.type, effect: 'light' }, () => config.label)
-    }
   },
   {
     key: 'permissionCode',
@@ -472,6 +465,7 @@ useContentRefresh(() => refreshTabData())
             v-model:page="pagination.page"
             v-model:page-size="pagination.pageSize"
             v-model:selected-row-keys="selectedRowKeys"
+            v-model:row-sortable="isTableRowSortable"
             :columns="resourceColumns"
             :data="tableData"
             :loading="loading"
@@ -481,7 +475,9 @@ useContentRefresh(() => refreshTabData())
             show-settings
             configurable-selection
             configurable-columns
+            configurable-row-sortable
             @page-change="refreshPermissionResources"
+            @row-reorder="() => {}"
           >
             <template #header>
               <CommonTableToolbar
@@ -532,8 +528,8 @@ useContentRefresh(() => refreshTabData())
           <template #node="{ data }">
             <ResourceTreeNodeRow
               :name="(data as PermissionResourceNode).name"
-              :tag-label="permissionTypeTagConfigMap[(data as PermissionResourceNode).type].label"
-              :tag-type="permissionTypeTagConfigMap[(data as PermissionResourceNode).type].type"
+              :tag-label="getPermissionNodeTagInfo(data).label"
+              :tag-type="getPermissionNodeTagInfo(data).type"
               :descriptor="(data as PermissionResourceNode).permissionCode"
             />
           </template>
