@@ -1,7 +1,7 @@
-import { Controller, Get } from '@nestjs/common'
+﻿import { Controller, Get } from '@nestjs/common'
 import { AppService } from './app.service'
-import { success } from './common/response/api-response'
-import type { ApiSuccessBody } from './common/response/api-response'
+import { success } from './core/response/api-response'
+import type { ApiSuccessBody } from './core/response/api-response'
 
 @Controller()
 export class AppController {

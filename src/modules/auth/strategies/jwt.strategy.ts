@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
+﻿/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { PassportStrategy } from '@nestjs/passport'
 import { Injectable, UnauthorizedException } from '@nestjs/common'
 import { UserService } from '../../user/user.service'
-import { getRequiredEnv } from '../../../common/config/env'
+import { getRequiredEnv } from '../../../config/env'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

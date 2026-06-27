@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { In, Repository } from 'typeorm'
-import { formatDateTime } from '../../common/utils/date-time.util'
+import { formatDateTime } from '../../core/utils/date-time.util'
 import { Role } from '../user/entities/role.entity'
 import { Menu } from './entities/menu.entity'
 import { CreateMenuDto } from './dto/create-menu.dto'
@@ -19,7 +19,7 @@ import {
   RoleMenuGrantDetailResponseDto
 } from './dto/menu-response.dto'
 import { GrantRoleMenuDto } from './dto/grant-role-menu.dto'
-import { RbacSyncService } from '../../common/ws/rbac-sync.service'
+import { RbacSyncService } from '../../infrastructure/ws/rbac-sync.service'
 
 @Injectable()
 export class MenuService {

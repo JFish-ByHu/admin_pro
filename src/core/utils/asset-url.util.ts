@@ -1,4 +1,4 @@
-import { getRequiredEnv } from '../config/env'
+import { getRequiredEnv } from '../../config/env'
 
 const UPLOAD_PUBLIC_BASE_URL = getRequiredEnv('UPLOAD_PUBLIC_BASE_URL').replace(/\/+$/, '')
 const UPLOAD_PUBLIC_BASE_URL_WITH_SLASH = `${UPLOAD_PUBLIC_BASE_URL}/`

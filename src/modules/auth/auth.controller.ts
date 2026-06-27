@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Post,
   Body,
@@ -19,8 +19,8 @@ import { SendEmailCodeDto } from './dto/send-email-code.dto'
 import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
 import { CheckResetEmailDto } from './dto/check-reset-email.dto'
 import { ResetPasswordDto } from './dto/reset-password.dto'
-import { success } from '../../common/response/api-response'
-import type { ApiSuccessBody } from '../../common/response/api-response'
+import { success } from '../../core/response/api-response'
+import type { ApiSuccessBody } from '../../core/response/api-response'
 import {
   CaptchaResponseDto,
   EncryptKeyResponseDto,
@@ -33,7 +33,7 @@ import {
   ResetPasswordResponseDto,
   VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
-import { PasswordDecryptInterceptor } from '../../common/interceptors/password-decrypt.interceptor'
+import { PasswordDecryptInterceptor } from '../../core/interceptors/password-decrypt.interceptor'
 import { LogAction } from '../logging/log-action.decorator'
 
 @Controller('auth')

@@ -1,12 +1,12 @@
-import { NestFactory } from '@nestjs/core'
+﻿import { NestFactory } from '@nestjs/core'
 import { ValidationPipe } from '@nestjs/common'
 import { join } from 'path'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
-import { TransformInterceptor } from './common/interceptors/transform.interceptor'
-import { HttpExceptionFilter } from './common/filters/http-exception.filter'
-import { getRequiredEnv } from './common/config/env'
-import { RbacBootstrapService } from './common/bootstrap/rbac-bootstrap.service'
+import { TransformInterceptor } from './core/interceptors/transform.interceptor'
+import { HttpExceptionFilter } from './core/filters/http-exception.filter'
+import { getRequiredEnv } from './config/env'
+import { RbacBootstrapService } from './infrastructure/bootstrap/rbac-bootstrap.service'
 
 async function bootstrap() {
   getRequiredEnv('JWT_ACCESS_SECRET')

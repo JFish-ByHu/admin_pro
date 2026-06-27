@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -11,11 +11,11 @@ import {
   UseGuards
 } from '@nestjs/common'
 import { AuthGuard } from '@nestjs/passport'
-import { RequirePermissions } from '../../common/decorators/permissions.decorator'
-import { PermissionsGuard } from '../../common/guards/permissions.guard'
-import { ROLE_PERMISSION_CODES } from '../../common/rbac/permission-registry'
-import { success } from '../../common/response/api-response'
-import type { ApiSuccessBody } from '../../common/response/api-response'
+import { RequirePermissions } from '../../core/decorators/permissions.decorator'
+import { PermissionsGuard } from '../../core/guards/permissions.guard'
+import { ROLE_PERMISSION_CODES } from '../../infrastructure/rbac/permission-registry'
+import { success } from '../../core/response/api-response'
+import type { ApiSuccessBody } from '../../core/response/api-response'
 import { RoleService } from './role.service'
 import { CreateRoleDto } from './dto/create-role.dto'
 import { UpdateRoleDto } from './dto/update-role.dto'

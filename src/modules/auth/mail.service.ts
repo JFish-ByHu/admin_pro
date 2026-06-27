@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common'
-import { getRequiredEnv } from '../../common/config/env'
+﻿import { Injectable } from '@nestjs/common'
+import { getRequiredEnv } from '../../config/env'
 
 type MailTransporter = {
   sendMail: (options: {

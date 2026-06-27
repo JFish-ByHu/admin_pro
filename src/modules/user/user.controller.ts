@@ -1,4 +1,4 @@
-import {
+﻿import {
   Controller,
   Get,
   Post,
@@ -26,11 +26,11 @@ import { UpdateUserDto } from './dto/update-user.dto'
 import { QueryUserDto } from './dto/query-user.dto'
 import { AssignUserRolesDto } from './dto/assign-user-roles.dto'
 import { UserListResponseDto, UserResponseDto } from './dto/user-response.dto'
-import { success } from '../../common/response/api-response'
-import type { ApiSuccessBody } from '../../common/response/api-response'
-import { RequirePermissions } from '../../common/decorators/permissions.decorator'
-import { PermissionsGuard } from '../../common/guards/permissions.guard'
-import { USER_PERMISSION_CODES } from '../../common/rbac/permission-registry'
+import { success } from '../../core/response/api-response'
+import type { ApiSuccessBody } from '../../core/response/api-response'
+import { RequirePermissions } from '../../core/decorators/permissions.decorator'
+import { PermissionsGuard } from '../../core/guards/permissions.guard'
+import { USER_PERMISSION_CODES } from '../../infrastructure/rbac/permission-registry'
 import { LogAction } from '../logging/log-action.decorator'
 
 const UPLOAD_ROOT_DIR = process.env.UPLOAD_ROOT_DIR || 'upload'

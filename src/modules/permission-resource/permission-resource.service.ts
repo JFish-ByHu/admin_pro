@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { In, Repository } from 'typeorm'
-import { formatDateTime } from '../../common/utils/date-time.util'
+import { formatDateTime } from '../../core/utils/date-time.util'
 import { Permission } from '../user/entities/permission.entity'
 import { Role } from '../user/entities/role.entity'
 import { CreatePermissionResourceDto } from './dto/create-permission-resource.dto'
@@ -19,7 +19,7 @@ import {
   RolePermissionGrantDetailResponseDto
 } from './dto/permission-resource-response.dto'
 import { GrantRolePermissionDto } from './dto/grant-role-permission.dto'
-import { RbacSyncService } from '../../common/ws/rbac-sync.service'
+import { RbacSyncService } from '../../infrastructure/ws/rbac-sync.service'
 
 @Injectable()
 export class PermissionResourceService {

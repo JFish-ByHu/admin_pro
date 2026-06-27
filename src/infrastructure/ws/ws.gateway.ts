@@ -8,7 +8,7 @@ import {
 import { Logger } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import type { Server, Socket } from 'socket.io'
-import { getRequiredEnv } from '../config/env'
+import { getRequiredEnv } from '../../config/env'
 import { UserService } from '../../modules/user/user.service'
 
 const USER_ROOM_PREFIX = 'user:'

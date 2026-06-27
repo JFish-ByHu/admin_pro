@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
@@ -22,9 +22,9 @@ import { SendEmailCodeDto } from './dto/send-email-code.dto'
 import { VerifyEmailCodeDto } from './dto/verify-email-code.dto'
 import { CheckResetEmailDto } from './dto/check-reset-email.dto'
 import { ResetPasswordDto } from './dto/reset-password.dto'
-import { getRequiredEnv } from '../../common/config/env'
-import { resolvePublicAssetUrl } from '../../common/utils/asset-url.util'
-import { PasswordUtil } from '../../common/utils/password.util'
+import { getRequiredEnv } from '../../config/env'
+import { resolvePublicAssetUrl } from '../../core/utils/asset-url.util'
+import { PasswordUtil } from '../../core/utils/password.util'
 import { EmailVerification } from './entities/email-verification.entity'
 import { MailService } from './mail.service'
 import {
