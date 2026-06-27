@@ -467,6 +467,7 @@ useContentRefresh(() => getUsers())
       v-model="query"
       :fields="filterFields"
       :loading="loading"
+      collapsible
       @search="searchUsers"
       @reset="resetFilters"
     />

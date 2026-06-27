@@ -464,6 +464,7 @@ useContentRefresh(() => refreshTabData())
             v-model="query"
             :fields="filterFields"
             :loading="loading"
+            collapsible
             @search="searchMenuResources"
             @reset="resetMenuFilters"
           />

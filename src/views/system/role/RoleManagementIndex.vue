@@ -445,6 +445,7 @@ useContentRefresh(() => refreshData())
       v-model="query"
       :fields="filterFields"
       :loading="loading"
+      collapsible
       @search="searchRoles"
       @reset="resetRoleFilters"
     />

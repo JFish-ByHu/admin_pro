@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 /**
  * 筛选字段配置
@@ -27,9 +27,15 @@ const props = withDefaults(
     modelValue: T
     /** 查询按钮加载状态 */
     loading?: boolean
+    /** 是否支持折叠 */
+    collapsible?: boolean
+    /** 折叠状态（v-model） */
+    collapsed?: boolean
   }>(),
   {
-    loading: false
+    loading: false,
+    collapsible: false,
+    collapsed: false
   }
 )
 
@@ -37,13 +43,102 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: T): void
   (e: 'search'): void
   (e: 'reset'): void
+  (e: 'update:collapsed', value: boolean): void
 }>()
+
+// 内部折叠状态（自管 ref，也支持外部 v-model:collapsed 接管）
+const collapsedState = ref(props.collapsed)
+
+// 外部通过 v-model:collapsed 同步时更新内部状态
+watch(
+  () => props.collapsed,
+  val => {
+    collapsedState.value = val
+  }
+)
 
 // 内部表单模型，保证双向同步
 const form = computed({
   get: () => props.modelValue,
   set: val => emit('update:modelValue', val)
 })
+
+/** 当前有效筛选条件摘要（用于折叠态展示） */
+const activeFilterSummary = computed(() => {
+  return props.fields
+    .map(field => {
+      const value = (props.modelValue as Record<string, unknown>)[field.prop]
+      if (value == null || value === '') return null
+
+      if (field.type === 'select') {
+        const option = field.options?.find(o => String(o.value) === String(value))
+        return option ? `${field.label}: ${option.label}` : null
+      }
+
+      if (field.type === 'daterange' && Array.isArray(value) && value.length === 2) {
+        return `${field.label}: ${value[0]} ~ ${value[1]}`
+      }
+
+      return `${field.label}: ${String(value)}`
+    })
+    .filter(Boolean)
+})
+
+const toggleCollapsed = () => {
+  collapsedState.value = !collapsedState.value
+  emit('update:collapsed', collapsedState.value)
+}
+
+const onBeforeEnter = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.height = '0'
+  htmlEl.style.opacity = '0'
+}
+
+const onEnter = (el: Element, done: () => void) => {
+  const htmlEl = el as HTMLElement
+  const realHeight = htmlEl.scrollHeight
+
+  // 强制回流后设置目标高度
+  void htmlEl.offsetHeight
+
+  htmlEl.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease'
+  htmlEl.style.height = `${realHeight}px`
+  htmlEl.style.opacity = '1'
+
+  htmlEl.addEventListener('transitionend', done, { once: true })
+}
+
+const onAfterEnter = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.height = ''
+  htmlEl.style.transition = ''
+  htmlEl.style.opacity = ''
+}
+
+const onBeforeLeave = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.height = `${htmlEl.scrollHeight}px`
+  htmlEl.style.opacity = '1'
+
+  void htmlEl.offsetHeight
+}
+
+const onLeave = (el: Element, done: () => void) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.transition = 'height 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease'
+  htmlEl.style.height = '0'
+  htmlEl.style.opacity = '0'
+
+  htmlEl.addEventListener('transitionend', done, { once: true })
+}
+
+const onAfterLeave = (el: Element) => {
+  const htmlEl = el as HTMLElement
+  htmlEl.style.height = ''
+  htmlEl.style.transition = ''
+  htmlEl.style.opacity = ''
+}
 
 // 更新单个字段
 const updateField = (prop: string, value: unknown) => {
@@ -64,77 +159,109 @@ const resetFilters = () => {
 </script>
 
 <template>
-  <div class="pro-filter">
-    <form class="filter-form" @submit.prevent="submitSearch">
-      <div class="filter-fields">
-        <div v-for="field in fields" :key="field.prop" class="filter-item">
-          <label class="filter-label">{{ field.label }}</label>
+  <div class="pro-filter" :class="{ 'is-collapsible': collapsible }">
+    <div
+      v-if="collapsible"
+      class="pro-filter__collapsed-bar"
+      :class="{ 'is-visible': collapsedState }"
+    >
+      <span class="pro-filter__collapsed-label">筛选条件</span>
+      <span v-if="activeFilterSummary.length" class="pro-filter__collapsed-summary">
+        {{ activeFilterSummary.join('，') }}
+      </span>
+      <span v-else class="pro-filter__collapsed-empty">未设置筛选</span>
+      <el-button size="small" text type="primary" @click="toggleCollapsed">
+        <el-icon><i-ep-arrow-down /></el-icon>
+        <span>展开</span>
+      </el-button>
+    </div>
 
-          <div class="filter-control">
-            <!-- 输入框 -->
-            <el-input
-              v-if="!field.type || field.type === 'input'"
-              :model-value="form[field.prop]"
-              :placeholder="field.placeholder || `请输入${field.label}`"
-              :clearable="field.clearable !== false"
-              @update:model-value="(val: unknown) => updateField(field.prop, val)"
-              @keyup.enter="submitSearch"
-            />
+    <Transition
+      name="filter-collapse"
+      @before-enter="onBeforeEnter"
+      @enter="onEnter"
+      @after-enter="onAfterEnter"
+      @before-leave="onBeforeLeave"
+      @leave="onLeave"
+      @after-leave="onAfterLeave"
+    >
+      <div v-if="!collapsible || !collapsedState" class="pro-filter__form-wrapper">
+        <form class="filter-form" @submit.prevent="submitSearch">
+          <div class="filter-fields">
+            <div v-for="field in fields" :key="field.prop" class="filter-item">
+              <label class="filter-label">{{ field.label }}</label>
 
-            <!-- 下拉选择 -->
-            <el-select
-              v-else-if="field.type === 'select'"
-              :model-value="form[field.prop]"
-              :placeholder="field.placeholder || `请选择${field.label}`"
-              :clearable="field.clearable !== false"
-              @update:model-value="(val: unknown) => updateField(field.prop, val)"
-            >
-              <el-option
-                v-for="opt in field.options"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </el-select>
+              <div class="filter-control">
+                <!-- 输入框 -->
+                <el-input
+                  v-if="!field.type || field.type === 'input'"
+                  :model-value="form[field.prop]"
+                  :placeholder="field.placeholder || `请输入${field.label}`"
+                  :clearable="field.clearable !== false"
+                  @update:model-value="(val: unknown) => updateField(field.prop, val)"
+                  @keyup.enter="submitSearch"
+                />
 
-            <!-- 单个日期 -->
-            <el-date-picker
-              v-else-if="field.type === 'date'"
-              :model-value="form[field.prop]"
-              type="date"
-              value-format="YYYY-MM-DD"
-              :placeholder="field.placeholder || `请选择${field.label}`"
-              :clearable="field.clearable !== false"
-              @update:model-value="(val: unknown) => updateField(field.prop, val)"
-            />
+                <!-- 下拉选择 -->
+                <el-select
+                  v-else-if="field.type === 'select'"
+                  :model-value="form[field.prop]"
+                  :placeholder="field.placeholder || `请选择${field.label}`"
+                  :clearable="field.clearable !== false"
+                  @update:model-value="(val: unknown) => updateField(field.prop, val)"
+                >
+                  <el-option
+                    v-for="opt in field.options"
+                    :key="opt.value"
+                    :label="opt.label"
+                    :value="opt.value"
+                  />
+                </el-select>
 
-            <!-- 日期范围 -->
-            <el-date-picker
-              v-else-if="field.type === 'daterange'"
-              :model-value="form[field.prop]"
-              type="daterange"
-              value-format="YYYY-MM-DD"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              :clearable="field.clearable !== false"
-              @update:model-value="(val: unknown) => updateField(field.prop, val)"
-            />
+                <!-- 单个日期 -->
+                <el-date-picker
+                  v-else-if="field.type === 'date'"
+                  :model-value="form[field.prop]"
+                  type="date"
+                  value-format="YYYY-MM-DD"
+                  :placeholder="field.placeholder || `请选择${field.label}`"
+                  :clearable="field.clearable !== false"
+                  @update:model-value="(val: unknown) => updateField(field.prop, val)"
+                />
+
+                <!-- 日期范围 -->
+                <el-date-picker
+                  v-else-if="field.type === 'daterange'"
+                  :model-value="form[field.prop]"
+                  type="daterange"
+                  value-format="YYYY-MM-DD"
+                  range-separator="至"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期"
+                  :clearable="field.clearable !== false"
+                  @update:model-value="(val: unknown) => updateField(field.prop, val)"
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div class="filter-actions">
-        <el-button color="var(--c-info)" native-type="submit" :loading="loading">
-          <el-icon v-show="!loading"><i-ep-search /></el-icon>
-          <span>查询</span>
-        </el-button>
-        <el-button type="info" plain @click="resetFilters">
-          <el-icon><i-ep-refresh /></el-icon>
-          <span>重置</span>
-        </el-button>
+          <div class="filter-actions">
+            <el-button color="var(--c-info)" native-type="submit" :loading="loading">
+              <el-icon v-show="!loading"><i-ep-search /></el-icon>
+              <span>查询</span>
+            </el-button>
+            <el-button type="info" plain @click="resetFilters">
+              <el-icon><i-ep-refresh /></el-icon>
+              <span>重置</span>
+            </el-button>
+            <el-button v-if="collapsible" size="small" text type="info" @click="toggleCollapsed">
+              <el-icon><i-ep-arrow-up /></el-icon>
+              <span>收起</span>
+            </el-button>
+          </div>
+        </form>
       </div>
-    </form>
+    </Transition>
   </div>
 </template>
 
@@ -145,6 +272,50 @@ const resetFilters = () => {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+
+  &__collapsed-bar {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out;
+
+    &.is-visible {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      max-height: 13px;
+      opacity: 1;
+    }
+  }
+
+  &__collapsed-label {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t-primary);
+  }
+
+  &__collapsed-summary {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--t-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__collapsed-empty {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--t-placeholder);
+  }
+
+  // 表单包裹层（Transition 控制高度，此处只设 overflow）
+  &__form-wrapper {
+    overflow: hidden;
+  }
 
   .filter-form {
     display: flex;
@@ -167,16 +338,14 @@ const resetFilters = () => {
   .filter-item {
     width: clamp(280px, 26vw, 360px);
     display: flex;
-    align-items: center;
-    gap: var(--space-3);
+    flex-direction: column;
+    gap: var(--space-1);
     min-width: 0;
 
     .filter-label {
-      flex-shrink: 0;
       font-size: 13px;
       font-weight: 600;
       color: var(--t-primary);
-      text-align: left;
     }
 
     .filter-control {
@@ -184,10 +353,13 @@ const resetFilters = () => {
       min-width: 0;
     }
 
+    :deep(.el-input),
     :deep(.el-select),
     :deep(.el-date-editor),
-    :deep(.el-input) {
+    :deep(.el-date-editor.el-range-editor) {
       width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
   }
 
@@ -209,13 +381,7 @@ const resetFilters = () => {
 
     .filter-item {
       width: 100%;
-      align-items: stretch;
-      flex-direction: column;
       gap: var(--space-2);
-
-      .filter-label {
-        width: auto;
-      }
     }
 
     .filter-actions {

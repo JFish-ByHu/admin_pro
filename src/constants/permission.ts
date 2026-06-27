@@ -40,3 +40,10 @@ export const ROLE_PERMISSION_CODES = {
 } as const
 
 export type RolePermissionCode = (typeof ROLE_PERMISSION_CODES)[keyof typeof ROLE_PERMISSION_CODES]
+
+export const LOG_PERMISSION_CODES = {
+  LIST: 'system:log:list',
+  DETAIL: 'system:log:detail'
+} as const
+
+export type LogPermissionCode = (typeof LOG_PERMISSION_CODES)[keyof typeof LOG_PERMISSION_CODES]

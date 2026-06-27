@@ -29,6 +29,8 @@
   --layout-section-margin-block: 0;
 
   // --- 卡片 / 面板语义间距 ---
+  --card-padding-3xs: clamp(2px, 1vw, 6px);
+  --card-padding-2xs: clamp(4px, 1vw, 8px);
   --card-padding-xs: clamp(8px, 1vw, 12px);
   --card-padding-sm: clamp(10px, 1vw, 14px);
   --card-padding-md: clamp(12px, 1vw, 16px);

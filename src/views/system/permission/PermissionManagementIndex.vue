@@ -456,6 +456,7 @@ useContentRefresh(() => refreshTabData())
             v-model="query"
             :fields="filterFields"
             :loading="loading"
+            collapsible
             @search="searchPermissionResources"
             @reset="resetPermissionFilters"
           />
