@@ -112,6 +112,14 @@ export class RbacBootstrapService {
       parentRoutePath: '/system',
       componentPath: 'views/system/permission/PermissionManagementIndex.vue',
       sort: 23
+    },
+    {
+      name: '日志管理',
+      type: 'menu',
+      routePath: '/system/log',
+      parentRoutePath: '/system',
+      componentPath: 'views/system/log/LogManagementIndex.vue',
+      sort: 24
     }
   ]
 

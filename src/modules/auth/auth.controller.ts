@@ -87,6 +87,7 @@ export class AuthController {
   @Post('password/reset')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(PasswordDecryptInterceptor)
+  @LogAction('认证', '密码重置')
   async resetPassword(
     @Body() dto: ResetPasswordDto
   ): Promise<ApiSuccessBody<ResetPasswordResponseDto>> {
@@ -103,6 +104,7 @@ export class AuthController {
 
   @Post('register')
   @UseInterceptors(PasswordDecryptInterceptor)
+  @LogAction('认证', '注册')
   async register(@Body() registerDto: RegisterDto): Promise<ApiSuccessBody<RegisterResponseDto>> {
     return success(await this.authService.register(registerDto))
   }
@@ -125,6 +127,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @UseGuards(AuthGuard('jwt'))
+  @LogAction('认证', '登出')
   async logout(
     @Req() request: { user: { id: string } }
   ): Promise<ApiSuccessBody<LogoutResponseDto>> {

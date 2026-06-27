@@ -4,7 +4,6 @@ import { join } from 'path'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { AppModule } from './app.module'
 import { TransformInterceptor } from './core/interceptors/transform.interceptor'
-import { HttpExceptionFilter } from './core/filters/http-exception.filter'
 import { getRequiredEnv } from './config/env'
 import { RbacBootstrapService } from './infrastructure/bootstrap/rbac-bootstrap.service'
 
@@ -36,8 +35,8 @@ async function bootstrap() {
   // 注册全局响应拦截器
   app.useGlobalInterceptors(new TransformInterceptor())
 
-  // 注册全局异常过滤器
-  app.useGlobalFilters(new HttpExceptionFilter())
+  // 注册全局异常过滤器（由 LoggingModule 通过 APP_FILTER 注入）
+  // app.useGlobalFilters(new HttpExceptionFilter())
 
   // 开启全局验证管道，使 class-validator 生效
   app.useGlobalPipes(
