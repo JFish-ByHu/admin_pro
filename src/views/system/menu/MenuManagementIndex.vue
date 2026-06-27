@@ -34,7 +34,6 @@ const dialogVisible = ref(false)
 const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingMenuId = ref('')
-const isTableRowSortable = ref(false)
 const editingMenuNode = ref<MenuResourceTableItem | null>(null)
 
 const hasPermission = (permissionCode: string) => {
@@ -473,7 +472,6 @@ useContentRefresh(() => refreshTabData())
             v-model:page="pagination.page"
             v-model:page-size="pagination.pageSize"
             v-model:selected-row-keys="selectedRowKeys"
-            v-model:row-sortable="isTableRowSortable"
             :columns="resourceColumns"
             :data="tableData"
             :loading="loading"
@@ -483,9 +481,7 @@ useContentRefresh(() => refreshTabData())
             show-settings
             configurable-selection
             configurable-columns
-            configurable-row-sortable
             @page-change="refreshMenuResources"
-            @row-reorder="() => {}"
           >
             <template #header>
               <CommonTableToolbar

@@ -39,7 +39,6 @@ const activeTab = defineModel<'resource' | 'grant'>('activeTab', {
 const userStore = useUserStore()
 const selectedRowKeys = ref<Array<string | number>>([])
 const dialogVisible = ref(false)
-const isTableRowSortable = ref(false)
 const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingPermissionId = ref('')
@@ -465,7 +464,6 @@ useContentRefresh(() => refreshTabData())
             v-model:page="pagination.page"
             v-model:page-size="pagination.pageSize"
             v-model:selected-row-keys="selectedRowKeys"
-            v-model:row-sortable="isTableRowSortable"
             :columns="resourceColumns"
             :data="tableData"
             :loading="loading"
@@ -475,9 +473,7 @@ useContentRefresh(() => refreshTabData())
             show-settings
             configurable-selection
             configurable-columns
-            configurable-row-sortable
             @page-change="refreshPermissionResources"
-            @row-reorder="() => {}"
           >
             <template #header>
               <CommonTableToolbar
