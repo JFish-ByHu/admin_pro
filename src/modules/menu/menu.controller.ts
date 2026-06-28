@@ -27,7 +27,7 @@ import {
   RoleMenuGrantDetailResponseDto
 } from './dto/menu-response.dto'
 import { GrantRoleMenuDto } from './dto/grant-role-menu.dto'
-import { LogAction } from '../logging/log-action.decorator'
+import { LogAction } from '../../core/decorators/log-action.decorator'
 
 @Controller('menus')
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)

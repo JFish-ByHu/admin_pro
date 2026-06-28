@@ -1,6 +1,6 @@
 export class PermissionResourceResponseDto {
   id!: string
-  parentId!: string | null
+  groupCode!: string | null
   name!: string
   type!: 'api' | 'button'
   permissionCode!: string

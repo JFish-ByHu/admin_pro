@@ -26,7 +26,7 @@ import {
   RoleListResponseDto,
   RoleUserGrantDetailResponseDto
 } from './dto/role-response.dto'
-import { LogAction } from '../logging/log-action.decorator'
+import { LogAction } from '../../core/decorators/log-action.decorator'
 
 @Controller('roles')
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)

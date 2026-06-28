@@ -10,39 +10,7 @@ import {
 import { Response, Request } from 'express'
 import { ApiErrorResponseEnvelope } from '../response/api-response'
 import { LoggingService } from '../../modules/logging/logging.service'
-
-/** 从请求中提取操作对象名称 */
-const extractTargetName = (request: Request): string | null => {
-  const body = (request.body || {}) as Record<string, unknown>
-
-  if (typeof body.name === 'string' && body.name.trim()) {
-    return body.name.trim()
-  }
-
-  if (typeof body.nickname === 'string' && body.nickname.trim()) {
-    return body.nickname.trim()
-  }
-
-  if (typeof body.username === 'string' && body.username.trim()) {
-    return body.username.trim()
-  }
-
-  return null
-}
-
-/** 脱敏 body */
-const sanitizeBody = (body: Record<string, unknown>): Record<string, unknown> => {
-  const safe = { ...body }
-  const sensitiveKeys = ['password', 'newPassword', 'confirmPassword', 'token', 'refreshToken']
-
-  sensitiveKeys.forEach(key => {
-    if (key in safe) {
-      safe[key] = '***'
-    }
-  })
-
-  return safe
-}
+import { extractTargetName, sanitizeBody } from '../utils/log-target.util'
 
 @Injectable()
 @Catch()

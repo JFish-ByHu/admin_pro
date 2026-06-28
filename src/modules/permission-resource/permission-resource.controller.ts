@@ -27,7 +27,7 @@ import {
   RolePermissionGrantDetailResponseDto
 } from './dto/permission-resource-response.dto'
 import { GrantRolePermissionDto } from './dto/grant-role-permission.dto'
-import { LogAction } from '../logging/log-action.decorator'
+import { LogAction } from '../../core/decorators/log-action.decorator'
 
 @Controller('permissions')
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)

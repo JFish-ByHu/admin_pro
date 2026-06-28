@@ -156,7 +156,7 @@ export class RbacBootstrapService {
     const exists = await this.permissionRepository.find({
       select: {
         id: true,
-        parentId: true,
+        groupCode: true,
         code: true,
         name: true,
         type: true,
@@ -167,13 +167,11 @@ export class RbacBootstrapService {
 
     for (const seed of PERMISSION_DEFINITIONS) {
       const current = existsMap.get(seed.code)
-      const parentCode = (seed as { parentCode?: string }).parentCode
-      const parentPermission = typeof parentCode === 'string' ? existsMap.get(parentCode) : null
-      const nextParentId = parentPermission?.id || null
+      const nextGroupCode = seed.groupCode || null
 
       if (!current) {
         const permission = this.permissionRepository.create({
-          parentId: nextParentId,
+          groupCode: nextGroupCode,
           code: seed.code,
           name: seed.name,
           type: seed.type,
@@ -189,7 +187,7 @@ export class RbacBootstrapService {
       }
 
       const needSync =
-        current.parentId !== nextParentId ||
+        current.groupCode !== nextGroupCode ||
         current.name !== seed.name ||
         current.type !== seed.type ||
         current.sort !== seed.sort
@@ -200,7 +198,7 @@ export class RbacBootstrapService {
 
       await this.permissionRepository.save({
         ...current,
-        parentId: nextParentId
+        groupCode: seed.groupCode || null
       })
       this.logger.log(`已同步权限定义: ${seed.code}`)
     }

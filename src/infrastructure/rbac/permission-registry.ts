@@ -1,11 +1,11 @@
-export type PermissionType = 'api' | 'button'
+﻿export type PermissionType = 'api' | 'button'
 
 export type PermissionDefinition = {
   code: string
   name: string
   type: PermissionType
   sort: number
-  parentCode?: string
+  groupCode?: string
 }
 
 export const USER_PERMISSION_CODES = {
@@ -48,143 +48,155 @@ export const LOG_PERMISSION_CODES = {
 } as const
 
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
-  { code: USER_PERMISSION_CODES.LIST, name: '用户列表', type: 'api', sort: 1 },
+  { code: USER_PERMISSION_CODES.LIST, name: '用户列表', type: 'api', sort: 1, groupCode: 'user' },
   {
     code: USER_PERMISSION_CODES.DETAIL,
     name: '用户详情',
     type: 'api',
     sort: 2,
-    parentCode: USER_PERMISSION_CODES.LIST
+    groupCode: 'user'
   },
   {
     code: USER_PERMISSION_CODES.CREATE,
     name: '创建用户',
     type: 'button',
     sort: 3,
-    parentCode: USER_PERMISSION_CODES.LIST
+    groupCode: 'user'
   },
   {
     code: USER_PERMISSION_CODES.UPDATE,
     name: '更新用户',
     type: 'button',
     sort: 4,
-    parentCode: USER_PERMISSION_CODES.LIST
+    groupCode: 'user'
   },
   {
     code: USER_PERMISSION_CODES.DELETE,
     name: '删除用户',
     type: 'button',
     sort: 5,
-    parentCode: USER_PERMISSION_CODES.LIST
+    groupCode: 'user'
   },
-  { code: MENU_PERMISSION_CODES.LIST, name: '菜单列表', type: 'api', sort: 6 },
+  { code: MENU_PERMISSION_CODES.LIST, name: '菜单列表', type: 'api', sort: 6, groupCode: 'menu' },
   {
     code: MENU_PERMISSION_CODES.DETAIL,
     name: '菜单详情',
     type: 'api',
     sort: 7,
-    parentCode: MENU_PERMISSION_CODES.LIST
+    groupCode: 'menu'
   },
   {
     code: MENU_PERMISSION_CODES.CREATE,
     name: '创建菜单',
     type: 'button',
     sort: 8,
-    parentCode: MENU_PERMISSION_CODES.LIST
+    groupCode: 'menu'
   },
   {
     code: MENU_PERMISSION_CODES.UPDATE,
     name: '更新菜单',
     type: 'button',
     sort: 9,
-    parentCode: MENU_PERMISSION_CODES.LIST
+    groupCode: 'menu'
   },
   {
     code: MENU_PERMISSION_CODES.DELETE,
     name: '删除菜单',
     type: 'button',
     sort: 10,
-    parentCode: MENU_PERMISSION_CODES.LIST
+    groupCode: 'menu'
   },
   {
     code: MENU_PERMISSION_CODES.GRANT,
     name: '菜单授权',
     type: 'button',
     sort: 11,
-    parentCode: MENU_PERMISSION_CODES.LIST
+    groupCode: 'menu'
   },
-  { code: PERMISSION_PERMISSION_CODES.LIST, name: '权限列表', type: 'api', sort: 12 },
+  {
+    code: PERMISSION_PERMISSION_CODES.LIST,
+    name: '权限列表',
+    type: 'api',
+    sort: 12,
+    groupCode: 'permission'
+  },
   {
     code: PERMISSION_PERMISSION_CODES.DETAIL,
     name: '权限详情',
     type: 'api',
     sort: 13,
-    parentCode: PERMISSION_PERMISSION_CODES.LIST
+    groupCode: 'permission'
   },
   {
     code: PERMISSION_PERMISSION_CODES.CREATE,
     name: '创建权限',
     type: 'button',
     sort: 14,
-    parentCode: PERMISSION_PERMISSION_CODES.LIST
+    groupCode: 'permission'
   },
   {
     code: PERMISSION_PERMISSION_CODES.UPDATE,
     name: '更新权限',
     type: 'button',
     sort: 15,
-    parentCode: PERMISSION_PERMISSION_CODES.LIST
+    groupCode: 'permission'
   },
   {
     code: PERMISSION_PERMISSION_CODES.DELETE,
     name: '删除权限',
     type: 'button',
     sort: 16,
-    parentCode: PERMISSION_PERMISSION_CODES.LIST
+    groupCode: 'permission'
   },
   {
     code: PERMISSION_PERMISSION_CODES.GRANT,
     name: '权限授权',
     type: 'button',
     sort: 17,
-    parentCode: PERMISSION_PERMISSION_CODES.LIST
+    groupCode: 'permission'
   },
-  { code: ROLE_PERMISSION_CODES.LIST, name: '角色列表', type: 'api', sort: 18 },
+  {
+    code: ROLE_PERMISSION_CODES.LIST,
+    name: '角色列表',
+    type: 'api',
+    sort: 18,
+    groupCode: 'role'
+  },
   {
     code: ROLE_PERMISSION_CODES.DETAIL,
     name: '角色详情',
     type: 'api',
     sort: 19,
-    parentCode: ROLE_PERMISSION_CODES.LIST
+    groupCode: 'role'
   },
   {
     code: ROLE_PERMISSION_CODES.CREATE,
     name: '创建角色',
     type: 'button',
     sort: 20,
-    parentCode: ROLE_PERMISSION_CODES.LIST
+    groupCode: 'role'
   },
   {
     code: ROLE_PERMISSION_CODES.UPDATE,
     name: '更新角色',
     type: 'button',
     sort: 21,
-    parentCode: ROLE_PERMISSION_CODES.LIST
+    groupCode: 'role'
   },
   {
     code: ROLE_PERMISSION_CODES.DELETE,
     name: '删除角色',
     type: 'button',
     sort: 22,
-    parentCode: ROLE_PERMISSION_CODES.LIST
+    groupCode: 'role'
   },
-  { code: LOG_PERMISSION_CODES.LIST, name: '日志列表', type: 'api', sort: 30 },
+  { code: LOG_PERMISSION_CODES.LIST, name: '日志列表', type: 'api', sort: 30, groupCode: 'log' },
   {
     code: LOG_PERMISSION_CODES.DETAIL,
     name: '日志详情',
     type: 'api',
     sort: 31,
-    parentCode: LOG_PERMISSION_CODES.LIST
+    groupCode: 'log'
   }
 ]
 

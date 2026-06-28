@@ -1,18 +1,10 @@
-import {
-  IsBoolean,
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  IsUUID,
-  MaxLength,
-  Min
-} from 'class-validator'
+﻿import { IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 
 export class CreatePermissionResourceDto {
   @IsOptional()
-  @IsUUID('4', { message: 'parentId 必须是合法的 UUID' })
-  parentId?: string
+  @IsString({ message: 'groupCode 必须是字符串' })
+  @MaxLength(50, { message: 'groupCode 最长 50 个字符' })
+  groupCode?: string
 
   @IsString({ message: 'name 必须是字符串' })
   @MaxLength(100, { message: 'name 最长 100 个字符' })

@@ -34,7 +34,7 @@ export class PermissionResourceService {
   private toPermissionResponse(permission: Permission): PermissionResourceResponseDto {
     return {
       id: permission.id,
-      parentId: permission.parentId,
+      groupCode: permission.groupCode,
       name: permission.name,
       type: permission.type,
       permissionCode: permission.code,
@@ -47,100 +47,69 @@ export class PermissionResourceService {
     }
   }
 
-  private async ensureParentValid(
-    parentId: string | null | undefined,
-    currentId?: string
-  ): Promise<void> {
-    if (!parentId) {
-      return
-    }
-
-    if (currentId && currentId === parentId) {
-      throw new BadRequestException('父级权限不能是自己')
-    }
-
-    const parent = await this.permissionRepository.findOne({ where: { id: parentId } })
-    if (!parent) {
-      throw new BadRequestException('父级权限不存在')
-    }
-
-    if (!currentId) {
-      return
-    }
-
-    const allItems = await this.permissionRepository.find({
-      select: {
-        id: true,
-        parentId: true
-      }
-    })
-
-    const childrenMap = new Map<string, string[]>()
-    allItems.forEach(item => {
-      if (!item.parentId) {
-        return
-      }
-      const children = childrenMap.get(item.parentId) || []
-      children.push(item.id)
-      childrenMap.set(item.parentId, children)
-    })
-
-    const stack = [currentId]
-    const descendants = new Set<string>()
-
-    while (stack.length > 0) {
-      const nodeId = stack.pop() as string
-      const children = childrenMap.get(nodeId) || []
-      children.forEach(childId => {
-        if (!descendants.has(childId)) {
-          descendants.add(childId)
-          stack.push(childId)
-        }
-      })
-    }
-
-    if (descendants.has(parentId)) {
-      throw new BadRequestException('父级权限不能是当前权限的子节点')
-    }
-  }
-
+  /**
+   * 构建树形结构：按 groupCode 分组，每组下挂叶子节点
+   * groupCode 相同的权限平级排列，无父子关系
+   */
   private buildTree(items: Permission[]): PermissionResourceTreeNodeDto[] {
-    const nodeMap = new Map<string, PermissionResourceTreeNodeDto>()
+    const groupMap = new Map<string, PermissionResourceTreeNodeDto>()
+    const ungrouped: PermissionResourceTreeNodeDto[] = []
 
     items.forEach(item => {
-      nodeMap.set(item.id, {
+      const node: PermissionResourceTreeNodeDto = {
         ...this.toPermissionResponse(item),
         children: []
-      })
+      }
+
+      if (item.groupCode) {
+        if (!groupMap.has(item.groupCode)) {
+          groupMap.set(item.groupCode, {
+            id: `__group__${item.groupCode}`,
+            groupCode: item.groupCode,
+            name: this.resolveGroupName(item.groupCode),
+            type: 'api',
+            permissionCode: '',
+            apiPath: '',
+            httpMethod: '',
+            sort: 0,
+            status: 'enabled',
+            createTime: '',
+            updateTime: '',
+            children: []
+          })
+        }
+
+        groupMap.get(item.groupCode)!.children.push(node)
+      } else {
+        ungrouped.push(node)
+      }
     })
 
     const roots: PermissionResourceTreeNodeDto[] = []
 
-    nodeMap.forEach(node => {
-      if (!node.parentId) {
-        roots.push(node)
-        return
-      }
+    const sortedGroups = Array.from(groupMap.entries()).sort(([a], [b]) => a.localeCompare(b))
 
-      const parent = nodeMap.get(node.parentId)
-      if (parent) {
-        parent.children.push(node)
-      } else {
-        roots.push(node)
-      }
+    sortedGroups.forEach(([, groupNode]) => {
+      groupNode.children.sort((a, b) => a.sort - b.sort)
+      roots.push(groupNode)
     })
 
-    const sortTree = (nodes: PermissionResourceTreeNodeDto[]) => {
-      nodes.sort((a, b) => a.sort - b.sort)
-      nodes.forEach(node => {
-        if (node.children.length > 0) {
-          sortTree(node.children)
-        }
-      })
-    }
+    ungrouped.sort((a, b) => a.sort - b.sort)
+    roots.push(...ungrouped)
 
-    sortTree(roots)
     return roots
+  }
+
+  /** 将 groupCode 映射为中文分组名 */
+  private resolveGroupName(code: string): string {
+    const map: Record<string, string> = {
+      user: '用户管理',
+      menu: '菜单管理',
+      permission: '权限管理',
+      role: '角色管理',
+      log: '日志管理'
+    }
+    return map[code] || code
   }
 
   private async getRoleIdsByPermissionIds(permissionIds: string[]): Promise<string[]> {
@@ -217,8 +186,6 @@ export class PermissionResourceService {
   }
 
   async add(dto: CreatePermissionResourceDto): Promise<PermissionResourceResponseDto> {
-    await this.ensureParentValid(dto.parentId)
-
     const codeExists = await this.permissionRepository.findOne({
       where: { code: dto.permissionCode }
     })
@@ -227,7 +194,7 @@ export class PermissionResourceService {
     }
 
     const item = this.permissionRepository.create({
-      parentId: dto.parentId || null,
+      groupCode: dto.groupCode || null,
       name: dto.name,
       code: dto.permissionCode,
       type: dto.type,
@@ -261,11 +228,6 @@ export class PermissionResourceService {
 
     const impactedRoleIds = await this.getRoleIdsByPermissionIds([id])
 
-    if (dto.parentId !== undefined) {
-      await this.ensureParentValid(dto.parentId, id)
-      item.parentId = dto.parentId || null
-    }
-
     if (dto.permissionCode && dto.permissionCode !== item.code) {
       const codeExists = await this.permissionRepository.findOne({
         where: { code: dto.permissionCode }
@@ -278,6 +240,7 @@ export class PermissionResourceService {
     if (dto.name !== undefined) item.name = dto.name
     if (dto.permissionCode !== undefined) item.code = dto.permissionCode
     if (dto.type !== undefined) item.type = dto.type
+    if (dto.groupCode !== undefined) item.groupCode = dto.groupCode || null
     if (dto.apiPath !== undefined) item.apiPath = dto.apiPath || null
     if (dto.httpMethod !== undefined) item.httpMethod = dto.httpMethod || null
     if (dto.sort !== undefined) item.sort = dto.sort
@@ -294,11 +257,6 @@ export class PermissionResourceService {
       throw new NotFoundException('权限资源不存在')
     }
 
-    const hasChildren = await this.permissionRepository.findOne({ where: { parentId: id } })
-    if (hasChildren) {
-      throw new BadRequestException('当前权限存在子节点，不能直接删除')
-    }
-
     const impactedRoleIds = await this.getRoleIdsByPermissionIds([id])
 
     await this.permissionRepository.remove(item)
@@ -313,15 +271,6 @@ export class PermissionResourceService {
     const list = await this.permissionRepository.findBy({ id: In(ids) })
     if (list.length === 0) {
       throw new NotFoundException('未找到可删除的权限资源')
-    }
-
-    const hasChildren = await this.permissionRepository
-      .createQueryBuilder('permission')
-      .where('permission.parentId IN (:...ids)', { ids })
-      .getCount()
-
-    if (hasChildren > 0) {
-      throw new BadRequestException('批量删除失败，所选权限中包含父节点')
     }
 
     const impactedRoleIds = await this.getRoleIdsByPermissionIds(ids)

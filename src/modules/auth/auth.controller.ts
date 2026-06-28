@@ -34,7 +34,7 @@ import {
   VerifyEmailCodeResponseDto
 } from './dto/auth-response.dto'
 import { PasswordDecryptInterceptor } from '../../core/interceptors/password-decrypt.interceptor'
-import { LogAction } from '../logging/log-action.decorator'
+import { LogAction } from '../../core/decorators/log-action.decorator'
 
 @Controller('auth')
 export class AuthController {

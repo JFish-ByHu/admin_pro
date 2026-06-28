@@ -3,41 +3,9 @@ import { Reflector } from '@nestjs/core'
 import { Observable, throwError } from 'rxjs'
 import { catchError, tap } from 'rxjs/operators'
 import { Request } from 'express'
-import { LOG_ACTION_KEY, LogActionMetadata } from './log-action.decorator'
+import { LOG_ACTION_KEY, LogActionMetadata } from '../../core/decorators/log-action.decorator'
 import { LoggingService } from './logging.service'
-
-/** 从请求中提取操作对象名称 */
-const extractTargetName = (request: Request): string | null => {
-  const body = (request.body || {}) as Record<string, unknown>
-
-  if (typeof body.name === 'string' && body.name.trim()) {
-    return body.name.trim()
-  }
-
-  if (typeof body.nickname === 'string' && body.nickname.trim()) {
-    return body.nickname.trim()
-  }
-
-  if (typeof body.username === 'string' && body.username.trim()) {
-    return body.username.trim()
-  }
-
-  return null
-}
-
-/** 脱敏 body，移除密码等敏感字段 */
-const sanitizeBody = (body: Record<string, unknown>): Record<string, unknown> => {
-  const safe = { ...body }
-  const sensitiveKeys = ['password', 'newPassword', 'confirmPassword', 'token', 'refreshToken']
-
-  sensitiveKeys.forEach(key => {
-    if (key in safe) {
-      safe[key] = '***'
-    }
-  })
-
-  return safe
-}
+import { extractTargetName, sanitizeBody } from '../../core/utils/log-target.util'
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {

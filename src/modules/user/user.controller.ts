@@ -31,7 +31,7 @@ import type { ApiSuccessBody } from '../../core/response/api-response'
 import { RequirePermissions } from '../../core/decorators/permissions.decorator'
 import { PermissionsGuard } from '../../core/guards/permissions.guard'
 import { USER_PERMISSION_CODES } from '../../infrastructure/rbac/permission-registry'
-import { LogAction } from '../logging/log-action.decorator'
+import { LogAction } from '../../core/decorators/log-action.decorator'
 
 const UPLOAD_ROOT_DIR = process.env.UPLOAD_ROOT_DIR || 'upload'
 const UPLOAD_AVATAR_DIR = process.env.UPLOAD_AVATAR_DIR || 'avatars'

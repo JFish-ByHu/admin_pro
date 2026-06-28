@@ -13,8 +13,8 @@ export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  parentId!: string | null
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  groupCode!: string | null
 
   @Column({ type: 'varchar', length: 100, unique: true })
   code!: string // 例如 'system:user:delete'
