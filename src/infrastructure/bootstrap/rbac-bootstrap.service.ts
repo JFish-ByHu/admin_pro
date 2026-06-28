@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { Menu } from '../../modules/menu/entities/menu.entity'
 import { Permission } from '../../modules/user/entities/permission.entity'
+import { PermissionGroup } from '../../modules/permission-group/entities/permission-group.entity'
 import { Role } from '../../modules/user/entities/role.entity'
 import { User } from '../../modules/user/entities/user.entity'
 import { PERMISSION_DEFINITIONS } from '../rbac/permission-registry'
@@ -18,6 +19,8 @@ export class RbacBootstrapService {
     private readonly menuRepository: Repository<Menu>,
     @InjectRepository(Permission)
     private readonly permissionRepository: Repository<Permission>,
+    @InjectRepository(PermissionGroup)
+    private readonly permissionGroupRepository: Repository<PermissionGroup>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>
   ) {}
@@ -47,6 +50,14 @@ export class RbacBootstrapService {
       description: '系统内置普通用户角色',
       isSystem: true
     }
+  ] as const
+
+  private readonly groupSeeds = [
+    { code: 'user', name: '用户管理', sort: 1 },
+    { code: 'menu', name: '菜单管理', sort: 2 },
+    { code: 'permission', name: '权限管理', sort: 3 },
+    { code: 'role', name: '角色管理', sort: 4 },
+    { code: 'log', name: '日志管理', sort: 5 }
   ] as const
 
   private readonly menuSeeds: Array<{
@@ -124,12 +135,34 @@ export class RbacBootstrapService {
   ]
 
   async bootstrap(): Promise<void> {
+    await this.ensureBaseGroups()
     await this.ensureBaseRoles()
     await this.ensureBasePermissions()
     await this.ensureBaseMenus()
     await this.ensureSuperRoleAllPermissions()
     await this.ensureSuperRoleAllMenus()
     await this.ensureUserRoleRelations()
+  }
+
+  private async ensureBaseGroups(): Promise<void> {
+    for (const seed of this.groupSeeds) {
+      const exists = await this.permissionGroupRepository.findOne({
+        where: { code: seed.code }
+      })
+      if (exists) {
+        continue
+      }
+
+      const group = this.permissionGroupRepository.create({
+        code: seed.code,
+        name: seed.name,
+        sort: seed.sort,
+        isActive: true
+      })
+
+      await this.permissionGroupRepository.save(group)
+      this.logger.log(`已初始化分组: ${seed.code}`)
+    }
   }
 
   private async ensureBaseRoles(): Promise<void> {

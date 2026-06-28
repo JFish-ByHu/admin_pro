@@ -8,6 +8,7 @@ import { AuthModule } from './modules/auth/auth.module'
 import { RoleModule } from './modules/role/role.module'
 import { MenuModule } from './modules/menu/menu.module'
 import { PermissionResourceModule } from './modules/permission-resource/permission-resource.module'
+import { PermissionGroupModule } from './modules/permission-group/permission-group.module'
 import { RbacBootstrapService } from './infrastructure/bootstrap/rbac-bootstrap.service'
 import { WsModule } from './infrastructure/ws/ws.module'
 import { Role } from './modules/user/entities/role.entity'
@@ -36,6 +37,7 @@ import { LoggingModule } from './modules/logging/logging.module'
     RoleModule,
     MenuModule,
     PermissionResourceModule,
+    PermissionGroupModule,
     LoggingModule
   ],
   controllers: [AppController],

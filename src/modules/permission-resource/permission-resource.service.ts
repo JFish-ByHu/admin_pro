@@ -20,6 +20,7 @@ import {
 } from './dto/permission-resource-response.dto'
 import { GrantRolePermissionDto } from './dto/grant-role-permission.dto'
 import { RbacSyncService } from '../../infrastructure/ws/rbac-sync.service'
+import { PermissionGroupService } from '../permission-group/permission-group.service'
 
 @Injectable()
 export class PermissionResourceService {
@@ -28,7 +29,8 @@ export class PermissionResourceService {
     private readonly permissionRepository: Repository<Permission>,
     @InjectRepository(Role)
     private readonly roleRepository: Repository<Role>,
-    private readonly rbacSyncService: RbacSyncService
+    private readonly rbacSyncService: RbacSyncService,
+    private readonly permissionGroupService: PermissionGroupService
   ) {}
 
   private toPermissionResponse(permission: Permission): PermissionResourceResponseDto {
@@ -50,11 +52,35 @@ export class PermissionResourceService {
   /**
    * 构建树形结构：按 groupCode 分组，每组下挂叶子节点
    * groupCode 相同的权限平级排列，无父子关系
+   * 分组名称从 PermissionGroup 表动态查询
    */
-  private buildTree(items: Permission[]): PermissionResourceTreeNodeDto[] {
+  private async buildTree(items: Permission[]): Promise<PermissionResourceTreeNodeDto[]> {
     const groupMap = new Map<string, PermissionResourceTreeNodeDto>()
     const ungrouped: PermissionResourceTreeNodeDto[] = []
 
+    // 1) 先从分组表拉取所有活跃分组，确保空分组也能在树中展示
+    const allGroups = await this.permissionGroupService.list()
+    const groupNameMap = new Map<string, string>()
+
+    allGroups.forEach(g => {
+      groupNameMap.set(g.code, g.name)
+      groupMap.set(g.code, {
+        id: `__group__${g.code}`,
+        groupCode: g.code,
+        name: g.name,
+        type: 'api',
+        permissionCode: '',
+        apiPath: '',
+        httpMethod: '',
+        sort: g.sort,
+        status: g.isActive ? 'enabled' : 'disabled',
+        createTime: g.createTime,
+        updateTime: g.updateTime,
+        children: []
+      })
+    })
+
+    // 2) 把权限叶子节点挂到对应分组下；无分组权限放 ungrouped
     items.forEach(item => {
       const node: PermissionResourceTreeNodeDto = {
         ...this.toPermissionResponse(item),
@@ -63,10 +89,11 @@ export class PermissionResourceService {
 
       if (item.groupCode) {
         if (!groupMap.has(item.groupCode)) {
+          const groupName = groupNameMap.get(item.groupCode) || item.groupCode
           groupMap.set(item.groupCode, {
             id: `__group__${item.groupCode}`,
             groupCode: item.groupCode,
-            name: this.resolveGroupName(item.groupCode),
+            name: groupName,
             type: 'api',
             permissionCode: '',
             apiPath: '',
@@ -98,18 +125,6 @@ export class PermissionResourceService {
     roots.push(...ungrouped)
 
     return roots
-  }
-
-  /** 将 groupCode 映射为中文分组名 */
-  private resolveGroupName(code: string): string {
-    const map: Record<string, string> = {
-      user: '用户管理',
-      menu: '菜单管理',
-      permission: '权限管理',
-      role: '角色管理',
-      log: '日志管理'
-    }
-    return map[code] || code
   }
 
   private async getRoleIdsByPermissionIds(permissionIds: string[]): Promise<string[]> {
@@ -173,7 +188,7 @@ export class PermissionResourceService {
       }
     })
 
-    return this.buildTree(data)
+    return await this.buildTree(data)
   }
 
   async detail(id: string): Promise<PermissionResourceResponseDto> {
