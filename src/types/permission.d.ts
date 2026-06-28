@@ -96,3 +96,24 @@ export interface PermissionResourceFormModel {
   sort: number
   status: PermissionResourceStatus
 }
+
+export interface PermissionGroupItem {
+  id: string
+  code: string
+  name: string
+  sort: number
+  isActive: boolean
+  createTime: string
+  updateTime: string
+}
+
+export interface PermissionGroupCreateParams {
+  code: string
+  name: string
+  isActive?: boolean
+}
+
+export interface PermissionGroupUpdateParams {
+  name?: string
+  isActive?: boolean
+}

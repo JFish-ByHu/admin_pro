@@ -1,5 +1,7 @@
 import request from '@/utils/request'
 import type {
+  PermissionGroupCreateParams,
+  PermissionGroupItem,
   PermissionResourceCreateParams,
   PermissionResourceListParams,
   PermissionResourceListResult,
@@ -77,5 +79,48 @@ export const batchDeletePermissionResources = (ids: string[]): Promise<{ deleted
     url: '/permissions/batchDelete',
     method: 'delete',
     data: { ids }
+  })
+}
+
+export const batchDeletePermissionGroups = (ids: string[]): Promise<{ deleted: number }> => {
+  return request({
+    url: '/permission-groups/batchDelete',
+    method: 'delete',
+    data: { ids }
+  })
+}
+
+export const getPermissionGroups = (): Promise<PermissionGroupItem[]> => {
+  return request({
+    url: '/permission-groups/list',
+    method: 'get'
+  })
+}
+
+export const addPermissionGroup = (
+  data: PermissionGroupCreateParams
+): Promise<PermissionGroupItem> => {
+  return request({
+    url: '/permission-groups/add',
+    method: 'post',
+    data
+  })
+}
+
+export const updatePermissionGroup = (
+  id: string,
+  data: { name?: string; isActive?: boolean }
+): Promise<PermissionGroupItem> => {
+  return request({
+    url: `/permission-groups/update/${id}`,
+    method: 'patch',
+    data
+  })
+}
+
+export const deletePermissionGroupById = (id: string): Promise<null> => {
+  return request({
+    url: `/permission-groups/delete/${id}`,
+    method: 'delete'
   })
 }

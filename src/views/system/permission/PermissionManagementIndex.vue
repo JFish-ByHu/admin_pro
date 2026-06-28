@@ -8,9 +8,14 @@ import CommonTableToolbar, {
   type CommonTableToolbarAction
 } from '@/components/common/CommonTableToolbar.vue'
 import {
+  addPermissionGroup,
   addPermissionResource,
+  batchDeletePermissionGroups,
   batchDeletePermissionResources,
+  deletePermissionGroupById,
   deletePermissionResourceById,
+  getPermissionGroups,
+  updatePermissionGroup,
   updatePermissionResource
 } from '@/api/permission'
 import { PERMISSION_PERMISSION_CODES } from '@/constants/permission'
@@ -20,6 +25,7 @@ import { useContentRefresh } from '@/composables/useContentRefresh'
 import ResourceTreeNodeRow from '@/views/system/components/ResourceTreeNodeRow.vue'
 import SystemGrantPane from '@/views/system/components/SystemGrantPane.vue'
 import type {
+  PermissionGroupItem,
   PermissionResourceFormModel,
   PermissionResourceNode,
   PermissionResourceTableItem
@@ -29,6 +35,7 @@ import { usePermissionResourceList } from './composables/usePermissionResourceLi
 import {
   PermissionResourceActionCell,
   PermissionResourceFormDialog,
+  PermissionGroupFormDialog,
   PermissionResourceNameCell
 } from './CompsExport'
 
@@ -45,6 +52,29 @@ const editingPermissionId = ref('')
 
 const groupDialogVisible = ref(false)
 const groupDialogSubmitting = ref(false)
+const groupEditVisible = ref(false)
+const groupEditSubmitting = ref(false)
+const editingGroupId = ref('')
+const editingGroupFormModel = ref<{
+  groupCode: string
+  groupName: string
+  sort: number
+  status: 'enabled' | 'disabled'
+}>({
+  groupCode: '',
+  groupName: '',
+  sort: 0,
+  status: 'enabled'
+})
+const groupList = ref<PermissionGroupItem[]>([])
+
+const loadGroupList = async () => {
+  try {
+    groupList.value = await getPermissionGroups()
+  } catch {
+    // ignore
+  }
+}
 
 const hasPermission = (permissionCode: string) => {
   return userStore.permissions.includes(permissionCode)
@@ -82,26 +112,6 @@ const {
   saveCurrentSubjectGrant,
   refreshSubjects
 } = usePermissionGrant({ permissionTreeData })
-
-/** 现有分组 code 列表（从权限树中采集） */
-const existingGroupCodes = computed(() => {
-  const codes = new Set<string>()
-
-  const travel = (nodes: PermissionResourceNode[]) => {
-    nodes.forEach(node => {
-      if (node.groupCode && !node.id.startsWith('__group__')) {
-        codes.add(node.groupCode)
-      }
-
-      if (node.children?.length) {
-        travel(node.children)
-      }
-    })
-  }
-
-  travel(permissionTreeData.value)
-  return Array.from(codes)
-})
 
 const toPermissionRow = (rowData: Record<string, unknown>) =>
   rowData as unknown as PermissionResourceTableItem
@@ -214,7 +224,12 @@ const openGroupDialog = () => {
   groupDialogVisible.value = true
 }
 
-const submitGroupDialog = async (payload: { groupCode: string; sort: number; status: string }) => {
+const submitGroupDialog = async (payload: {
+  groupCode: string
+  groupName: string
+  sort: number
+  status: string
+}) => {
   if (!canCreatePermission.value) {
     return
   }
@@ -222,26 +237,98 @@ const submitGroupDialog = async (payload: { groupCode: string; sort: number; sta
   groupDialogSubmitting.value = true
 
   try {
-    const groupCode = payload.groupCode
-    const groupSeedName = `${groupCode}分组`
-    const groupSeedPermissionCode = `system:${groupCode}:group`
-
-    await addPermissionResource({
-      groupCode,
-      name: groupSeedName,
-      permissionCode: groupSeedPermissionCode,
-      type: 'button',
-      sort: payload.sort,
+    await addPermissionGroup({
+      code: payload.groupCode,
+      name: payload.groupName,
       isActive: payload.status === 'enabled'
     })
 
     Message.success('分组创建成功')
     groupDialogVisible.value = false
     selectedRowKeys.value = []
-    await Promise.all([refreshPermissionResources(), refreshSubjects()])
+    await Promise.all([loadGroupList(), refreshPermissionResources(), refreshSubjects()])
   } finally {
     groupDialogSubmitting.value = false
   }
+}
+
+const openEditGroupDialog = (row: PermissionResourceTableItem) => {
+  if (!canUpdatePermission.value) {
+    return
+  }
+
+  // 从 groupCode 反查 groupList 获取完整分组信息
+  const groupCode = row.groupCode || ''
+  const group = groupList.value.find(g => g.code === groupCode)
+
+  editingGroupId.value = group?.id || ''
+  editingGroupFormModel.value = {
+    groupCode,
+    groupName: group?.name || groupCode,
+    sort: row.sort,
+    status: row.status
+  }
+  groupEditVisible.value = true
+}
+
+const submitEditGroupDialog = async (payload: {
+  groupCode: string
+  groupName: string
+  sort: number
+  status: string
+}) => {
+  if (!canUpdatePermission.value) {
+    return
+  }
+
+  groupEditSubmitting.value = true
+
+  try {
+    await updatePermissionGroup(editingGroupId.value, {
+      name: payload.groupName,
+      isActive: payload.status === 'enabled'
+    })
+
+    Message.success('分组更新成功')
+    groupEditVisible.value = false
+    await Promise.all([loadGroupList(), refreshPermissionResources(), refreshSubjects()])
+  } finally {
+    groupEditSubmitting.value = false
+  }
+}
+
+const deleteGroup = (row: PermissionResourceTableItem) => {
+  if (!canDeletePermission.value) {
+    return
+  }
+
+  const groupCode = row.groupCode || ''
+  const group = groupList.value.find(g => g.code === groupCode)
+  const groupId = group?.id
+
+  if (!groupId) {
+    Message.warning('未找到对应分组记录')
+    return
+  }
+
+  ElMessageBox.confirm(
+    `确认删除分组「${row.name}」吗？该分组下的权限将变为无分组状态。`,
+    '删除分组确认',
+    {
+      type: 'warning',
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消'
+    }
+  )
+    .then(async () => {
+      await deletePermissionGroupById(groupId)
+
+      Message.success('分组删除成功')
+      await Promise.all([loadGroupList(), refreshPermissionResources(), refreshSubjects()])
+    })
+    .catch(err => {
+      console.error('Delete Group Error:', err)
+    })
 }
 
 const deletePermission = (row: PermissionResourceTableItem) => {
@@ -274,26 +361,61 @@ const deleteSelectedPermissions = () => {
     return
   }
 
-  const deleteCount = selectedRowKeys.value.length
+  const allKeys = selectedRowKeys.value.map(String)
 
-  ElMessageBox.confirm(`确认删除已选中的 ${deleteCount} 个权限吗？`, '批量删除确认', {
-    type: 'warning',
-    confirmButtonText: '确认删除',
-    cancelButtonText: '取消'
-  })
+  // 拆分为分组虚拟 ID 和权限真实 ID
+  const groupKeys = allKeys.filter(k => k.startsWith('__group__'))
+  const permissionKeys = allKeys.filter(k => !k.startsWith('__group__'))
+
+  // 将分组虚拟 ID 映射为真实 UUID
+  const groupIds = groupKeys
+    .map(key => {
+      const code = key.replace('__group__', '')
+      return groupList.value.find(g => g.code === code)?.id
+    })
+    .filter(Boolean) as string[]
+
+  const parts: string[] = []
+  if (groupIds.length) {
+    parts.push(`${groupIds.length} 个分组`)
+  }
+  if (permissionKeys.length) {
+    parts.push(`${permissionKeys.length} 个权限`)
+  }
+
+  const totalCount = groupIds.length + permissionKeys.length
+
+  ElMessageBox.confirm(
+    `确认删除已选中的 ${parts.join(' + ')}（共 ${totalCount} 项）吗？`,
+    '批量删除确认',
+    {
+      type: 'warning',
+      confirmButtonText: '确认删除',
+      cancelButtonText: '取消'
+    }
+  )
     .then(async () => {
-      await batchDeletePermissionResources(selectedRowKeys.value.map(String))
+      const tasks: Promise<unknown>[] = []
 
-      const nextTotal = Math.max(0, pagination.total - deleteCount)
+      if (groupIds.length) {
+        tasks.push(batchDeletePermissionGroups(groupIds))
+      }
+      if (permissionKeys.length) {
+        tasks.push(batchDeletePermissionResources(permissionKeys))
+      }
+
+      await Promise.all(tasks)
+
+      const nextTotal = Math.max(0, pagination.total - totalCount)
       const maxPage = Math.max(1, Math.ceil(nextTotal / pagination.pageSize))
       pagination.page = Math.min(pagination.page, maxPage)
       selectedRowKeys.value = []
 
-      Message.success(`已删除 ${deleteCount} 个权限`)
-      await Promise.all([refreshPermissionResources(), refreshSubjects()])
+      Message.success(`已删除 ${totalCount} 项`)
+      await Promise.all([loadGroupList(), refreshPermissionResources(), refreshSubjects()])
     })
     .catch(err => {
-      console.error('Batch Delete Permission Error:', err)
+      console.error('Batch Delete Error:', err)
     })
 }
 
@@ -386,7 +508,9 @@ const resourceColumns: CommonTableColumn[] = [
         canDelete: canDeletePermission.value,
         deleteDisabledReason: canDeletePermission.value ? '' : '无删除权限',
         onEdit: openEditPermissionDialog,
-        onDelete: deletePermission
+        onDelete: deletePermission,
+        onEditGroup: openEditGroupDialog,
+        onDeleteGroup: deleteGroup
       })
     }
   }
@@ -449,7 +573,7 @@ const refreshTabData = async () => {
 }
 
 onMounted(() => {
-  void Promise.all([getPermissionResources(), refreshSubjects()])
+  void Promise.all([getPermissionResources(), refreshSubjects(), loadGroupList()])
 })
 
 useContentRefresh(() => refreshTabData())
@@ -506,7 +630,7 @@ useContentRefresh(() => refreshTabData())
                 : PERMISSION_PERMISSION_CODES.UPDATE
             "
             :initial-value="formModel"
-            :existing-group-codes="existingGroupCodes"
+            :group-list="groupList"
             @submit="submitPermissionDialog"
           />
 
@@ -514,8 +638,18 @@ useContentRefresh(() => refreshTabData())
             v-model:visible="groupDialogVisible"
             :submitting="groupDialogSubmitting"
             :submit-permission="PERMISSION_PERMISSION_CODES.CREATE"
-            :existing-group-codes="existingGroupCodes"
+            :group-list="groupList"
             @submit="submitGroupDialog"
+          />
+
+          <PermissionGroupFormDialog
+            v-model:visible="groupEditVisible"
+            mode="edit"
+            :submitting="groupEditSubmitting"
+            :submit-permission="PERMISSION_PERMISSION_CODES.UPDATE"
+            :group-list="groupList"
+            :initial-value="editingGroupFormModel"
+            @submit="submitEditGroupDialog"
           />
         </div>
       </el-tab-pane>

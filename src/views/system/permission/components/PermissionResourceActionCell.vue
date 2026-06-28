@@ -16,9 +16,34 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'edit', row: PermissionResourceTableItem): void
   (e: 'delete', row: PermissionResourceTableItem): void
+  (e: 'editGroup', row: PermissionResourceTableItem): void
+  (e: 'deleteGroup', row: PermissionResourceTableItem): void
 }>()
 
+const isGroup = computed(() => props.row.id.startsWith('__group__'))
+
 const actions = computed<CommonTableActionItem[]>(() => {
+  if (isGroup.value) {
+    return [
+      {
+        key: 'edit-group',
+        tooltip: props.canEdit ? '编辑分组' : '无编辑权限',
+        icon: Edit,
+        color: 'var(--c-info)',
+        disabled: !props.canEdit,
+        onClick: () => emit('editGroup', props.row)
+      },
+      {
+        key: 'delete-group',
+        tooltip: props.canDelete ? '删除分组' : props.deleteDisabledReason || '无删除权限',
+        icon: Delete,
+        type: 'danger',
+        disabled: !props.canDelete,
+        onClick: () => emit('deleteGroup', props.row)
+      }
+    ]
+  }
+
   return [
     {
       key: 'edit',

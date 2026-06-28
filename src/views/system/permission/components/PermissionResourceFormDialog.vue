@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { PermissionResourceFormModel } from '@/types/permission'
+import type { PermissionGroupItem, PermissionResourceFormModel } from '@/types/permission'
 
 const props = defineProps<{
   visible: boolean
@@ -10,7 +10,7 @@ const props = defineProps<{
   submitting: boolean
   submitPermission?: string | string[]
   initialValue: PermissionResourceFormModel
-  existingGroupCodes?: string[]
+  groupList?: PermissionGroupItem[]
 }>()
 
 const emit = defineEmits<{
@@ -26,20 +26,12 @@ const localVisible = computed({
   set: value => emit('update:visible', value)
 })
 
-const GROUP_NAME_MAP: Record<string, string> = {
-  user: '用户管理',
-  menu: '菜单管理',
-  permission: '权限管理',
-  role: '角色管理',
-  log: '日志管理'
-}
-
-/** 分组下拉选项（已有 groupCode + 名称映射） */
+/** 分组下拉选项（从 groupList 动态生成） */
 const groupOptions = computed(() => {
-  const codes = props.existingGroupCodes || Object.keys(GROUP_NAME_MAP)
-  return codes.map(code => ({
-    label: GROUP_NAME_MAP[code] || code,
-    value: code
+  const list = props.groupList || []
+  return list.map(item => ({
+    label: item.name,
+    value: item.code
   }))
 })
 

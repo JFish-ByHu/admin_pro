@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
+import type { PermissionGroupItem } from '@/types/permission'
 
 export interface PermissionGroupFormModel {
   groupCode: string
+  groupName: string
   sort: number
   status: 'enabled' | 'disabled'
 }
 
 const props = defineProps<{
   visible: boolean
+  mode?: 'add' | 'edit'
+  title?: string
   submitting: boolean
   submitPermission?: string | string[]
-  existingGroupCodes?: string[]
+  groupList?: PermissionGroupItem[]
+  initialValue?: PermissionGroupFormModel
 }>()
 
 const emit = defineEmits<{
@@ -22,29 +27,41 @@ const emit = defineEmits<{
 
 const formRef = ref<FormInstance>()
 
-const localFormModel = ref<PermissionGroupFormModel>({
+const isEditMode = computed(() => props.mode === 'edit')
+const dialogTitle = computed(() => props.title || (isEditMode.value ? '编辑分组' : '新增分组'))
+
+const createInitialFormModel = (): PermissionGroupFormModel => ({
   groupCode: '',
+  groupName: '',
   sort: 0,
   status: 'enabled'
 })
+
+const localFormModel = ref<PermissionGroupFormModel>(createInitialFormModel())
 
 const localVisible = computed({
   get: () => props.visible,
   set: value => emit('update:visible', value)
 })
 
-const formRules: FormRules<PermissionGroupFormModel> = {
+const existingCodes = computed(() => (props.groupList || []).map(g => g.code))
+
+const formRules = computed<FormRules<PermissionGroupFormModel>>(() => ({
   groupCode: [
-    { required: true, message: '请输入分组标识', trigger: 'blur' },
+    { required: !isEditMode.value, message: '请输入分组标识', trigger: 'blur' },
     { max: 50, message: '分组标识最多 50 字符', trigger: 'blur' },
     {
       validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+        if (isEditMode.value) {
+          callback()
+          return
+        }
         const code = (value || '').trim().toLowerCase()
         if (!code) {
           callback()
           return
         }
-        if ((props.existingGroupCodes || []).includes(code)) {
+        if (existingCodes.value.includes(code)) {
           callback(new Error('分组标识已存在，请更换'))
           return
         }
@@ -52,14 +69,17 @@ const formRules: FormRules<PermissionGroupFormModel> = {
       },
       trigger: 'blur'
     }
+  ],
+  groupName: [
+    { required: true, message: '请输入分组名称', trigger: 'blur' },
+    { max: 100, message: '分组名称最多 100 字符', trigger: 'blur' }
   ]
-}
+}))
 
 const resetFormModel = () => {
   localFormModel.value = {
-    groupCode: '',
-    sort: 0,
-    status: 'enabled'
+    ...createInitialFormModel(),
+    ...(props.initialValue || {})
   }
 }
 
@@ -75,7 +95,8 @@ const submitDialog = async () => {
 
   emit('submit', {
     ...localFormModel.value,
-    groupCode: localFormModel.value.groupCode.trim().toLowerCase()
+    groupCode: localFormModel.value.groupCode.trim().toLowerCase(),
+    groupName: localFormModel.value.groupName.trim()
   })
 }
 
@@ -96,7 +117,7 @@ watch(
 <template>
   <el-dialog
     v-model="localVisible"
-    title="新增分组"
+    :title="dialogTitle"
     width="min(480px, calc(100vw - 32px))"
     class="permission-group-form-dialog"
     destroy-on-close
@@ -105,8 +126,17 @@ watch(
       <el-form-item label="分组标识" prop="groupCode">
         <el-input
           v-model="localFormModel.groupCode"
+          :disabled="isEditMode"
           placeholder="英文标识，如 report"
           maxlength="50"
+        />
+      </el-form-item>
+
+      <el-form-item label="分组名称" prop="groupName">
+        <el-input
+          v-model="localFormModel.groupName"
+          placeholder="中文名称，如 报告"
+          maxlength="100"
         />
       </el-form-item>
 
@@ -129,13 +159,6 @@ watch(
           </el-form-item>
         </el-col>
       </el-row>
-
-      <el-alert type="info" :closable="false" show-icon class="group-create-tip">
-        <template #title>
-          创建分组后将自动生成一条
-          <code>system:{{ localFormModel.groupCode || 'xxx' }}:group</code> 权限记录
-        </template>
-      </el-alert>
     </el-form>
 
     <template #footer>
@@ -146,7 +169,7 @@ watch(
         :loading="submitting"
         @click="submitDialog"
       >
-        创建分组
+        {{ isEditMode ? '保存修改' : '创建分组' }}
       </el-button>
     </template>
   </el-dialog>
@@ -174,9 +197,5 @@ watch(
     padding: var(--space-3) var(--space-5) var(--space-5);
     border-top: 1px solid var(--border-light);
   }
-}
-
-.group-create-tip {
-  margin-top: var(--space-3);
 }
 </style>
