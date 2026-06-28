@@ -5,6 +5,7 @@ export interface TableSettingState {
   rowSortableEnabled?: boolean
   selectionEnabled?: boolean
   visibleColumnKeys?: string[]
+  filterCollapsed?: boolean
 }
 
 export const useTableSettingsStore = defineStore(

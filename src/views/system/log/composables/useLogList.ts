@@ -11,8 +11,7 @@ const MODULE_OPTIONS = [
   { label: '角色管理', value: '角色管理' },
   { label: '菜单管理', value: '菜单管理' },
   { label: '权限管理', value: '权限管理' },
-  { label: '认证', value: '认证' },
-  { label: '异常', value: '异常' }
+  { label: '认证', value: '认证' }
 ]
 
 /** 操作类型选项 */
@@ -53,7 +52,6 @@ export const useLogList = (isErrorTab: Ref<boolean>) => {
 
   const query = ref<LogQuery>(getDefaultQuery(isErrorTab.value))
 
-  /** 筛选字段：异常日志 tab 隐藏"结果"下拉 */
   const filterFields = computed<TableFilterField[]>(() => {
     const fields: TableFilterField[] = [
       {
@@ -67,7 +65,6 @@ export const useLogList = (isErrorTab: Ref<boolean>) => {
       { prop: 'dateRange', label: '时间范围', type: 'daterange', placeholder: '选择日期范围' }
     ]
 
-    // 异常日志 tab 结果固定为 fail，不展示结果筛选
     if (!isErrorTab.value) {
       fields.splice(3, 0, {
         prop: 'result',

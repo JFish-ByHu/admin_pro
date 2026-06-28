@@ -10,9 +10,14 @@ interface UsePermissionGrantOptions {
   permissionTreeData: Ref<PermissionResourceNode[]>
 }
 
+const isVirtualGroupNode = (node: PermissionResourceNode) => node.id.startsWith('__group__')
+
 const collectAllNodeIds = (nodes: PermissionResourceNode[], ids: string[] = []) => {
   nodes.forEach(node => {
-    ids.push(node.id)
+    // 虚拟分组节点不可勾选
+    if (!isVirtualGroupNode(node)) {
+      ids.push(node.id)
+    }
 
     if (node.children?.length) {
       collectAllNodeIds(node.children, ids)

@@ -3,11 +3,6 @@ import { computed, nextTick, ref, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { PermissionResourceFormModel } from '@/types/permission'
 
-interface ParentOption {
-  label: string
-  value: string
-}
-
 const props = defineProps<{
   visible: boolean
   mode: 'add' | 'edit'
@@ -15,7 +10,7 @@ const props = defineProps<{
   submitting: boolean
   submitPermission?: string | string[]
   initialValue: PermissionResourceFormModel
-  parentOptions: ParentOption[]
+  existingGroupCodes?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +25,26 @@ const localVisible = computed({
   get: () => props.visible,
   set: value => emit('update:visible', value)
 })
+
+const GROUP_NAME_MAP: Record<string, string> = {
+  user: '用户管理',
+  menu: '菜单管理',
+  permission: '权限管理',
+  role: '角色管理',
+  log: '日志管理'
+}
+
+/** 分组下拉选项（已有 groupCode + 名称映射） */
+const groupOptions = computed(() => {
+  const codes = props.existingGroupCodes || Object.keys(GROUP_NAME_MAP)
+  return codes.map(code => ({
+    label: GROUP_NAME_MAP[code] || code,
+    value: code
+  }))
+})
+
+/** 分组是否可编辑（edit 模式下禁止修改分组） */
+const canEditGroup = computed(() => props.mode === 'add')
 
 const formRules: FormRules<PermissionResourceFormModel> = {
   name: [
@@ -47,7 +62,7 @@ const formRules: FormRules<PermissionResourceFormModel> = {
 
 function createInitialFormModel(): PermissionResourceFormModel {
   return {
-    parentId: '',
+    groupCode: '',
     name: '',
     permissionCode: '',
     type: 'api',
@@ -77,6 +92,7 @@ const submitDialog = async () => {
 
   emit('submit', {
     ...localFormModel.value,
+    groupCode: localFormModel.value.groupCode.trim().toLowerCase(),
     name: localFormModel.value.name.trim(),
     permissionCode: localFormModel.value.permissionCode.trim(),
     apiPath: localFormModel.value.apiPath.trim(),
@@ -90,7 +106,6 @@ watch(
     if (!visible) {
       return
     }
-
     resetFormModel()
     await nextTick()
     formRef.value?.clearValidate()
@@ -110,24 +125,23 @@ watch(
     <el-form ref="formRef" :model="localFormModel" :rules="formRules" label-position="top">
       <el-row :gutter="16">
         <el-col :xs="24" :sm="12">
-          <el-form-item label="父级权限">
-            <el-select v-model="localFormModel.parentId" placeholder="顶级权限">
-              <el-option label="顶级权限" value="" />
+          <el-form-item label="所属分组" prop="groupCode">
+            <el-select
+              v-model="localFormModel.groupCode"
+              :disabled="!canEditGroup"
+              placeholder="请选择或输入分组标识"
+              filterable
+              allow-create
+              clearable
+              default-first-option
+              style="width: 100%"
+            >
               <el-option
-                v-for="option in parentOptions"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
+                v-for="opt in groupOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
               />
-            </el-select>
-          </el-form-item>
-        </el-col>
-
-        <el-col :xs="24" :sm="12">
-          <el-form-item label="权限类型" prop="type">
-            <el-select v-model="localFormModel.type" placeholder="请选择权限类型">
-              <el-option label="接口" value="api" />
-              <el-option label="按钮" value="button" />
             </el-select>
           </el-form-item>
         </el-col>
@@ -141,6 +155,15 @@ watch(
         <el-col :xs="24" :sm="12">
           <el-form-item label="权限标识" prop="permissionCode">
             <el-input v-model="localFormModel.permissionCode" placeholder="如 system:menu:list" />
+          </el-form-item>
+        </el-col>
+
+        <el-col :xs="24" :sm="12">
+          <el-form-item label="权限类型" prop="type">
+            <el-select v-model="localFormModel.type" style="width: 100%">
+              <el-option label="接口" value="api" />
+              <el-option label="按钮" value="button" />
+            </el-select>
           </el-form-item>
         </el-col>
 

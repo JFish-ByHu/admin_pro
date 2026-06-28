@@ -66,7 +66,7 @@ export const usePermissionResourceList = () => {
       .flatMap(node => {
         const currentRow: PermissionResourceTableItem = {
           id: node.id,
-          parentId: node.parentId,
+          groupCode: node.groupCode,
           level,
           name: node.name,
           type: node.type,
@@ -85,6 +85,11 @@ export const usePermissionResourceList = () => {
   }
 
   const isRowMatched = (row: PermissionResourceTableItem) => {
+    // 虚拟分组节点始终显示（不过滤）
+    if (row.id.startsWith('__group__')) {
+      return true
+    }
+
     const keyword = query.value.keyword.trim().toLowerCase()
 
     if (query.value.type && row.type !== query.value.type) {
@@ -145,7 +150,6 @@ export const usePermissionResourceList = () => {
   }
 
   const refreshPermissionResources = async () => {
-    pagination.page = 1
     await getPermissionResources()
   }
 

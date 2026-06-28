@@ -32,7 +32,24 @@ const emit = defineEmits<{
 
 const treeRef = ref<TreeInstance>()
 
-const treeDataForElTree = computed(() => props.treeData as unknown as TreeNodeData[])
+/** 递归标记虚拟分组节点为 disabled（不可勾选） */
+const markVirtualGroupDisabled = (nodes: unknown[]): unknown[] => {
+  return nodes.map((node: unknown) => {
+    const n = node as Record<string, unknown>
+    const isVirtual = typeof n.id === 'string' && n.id.startsWith('__group__')
+    const children = Array.isArray(n.children) ? markVirtualGroupDisabled(n.children) : n.children
+
+    return {
+      ...n,
+      disabled: isVirtual ? true : undefined,
+      children
+    }
+  })
+}
+
+const treeDataForElTree = computed(
+  () => markVirtualGroupDisabled(props.treeData) as unknown as TreeNodeData[]
+)
 
 const checkedCount = computed(() => props.checkedKeys.length)
 

@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
 import { computed, ref, watch } from 'vue'
+import { useTableSettingsStore } from '@/stores/tableSettings'
 
 /**
  * 筛选字段配置
@@ -31,11 +32,14 @@ const props = withDefaults(
     collapsible?: boolean
     /** 折叠状态（v-model） */
     collapsed?: boolean
+    /** 持久化标识，传入后自动记住折叠状态 */
+    settingsKey?: string
   }>(),
   {
     loading: false,
     collapsible: false,
-    collapsed: false
+    collapsed: false,
+    settingsKey: ''
   }
 )
 
@@ -46,10 +50,25 @@ const emit = defineEmits<{
   (e: 'update:collapsed', value: boolean): void
 }>()
 
-// 内部折叠状态（自管 ref，也支持外部 v-model:collapsed 接管）
-const collapsedState = ref(props.collapsed)
+// 内部表单模型，保证双向同步
+const form = computed({
+  get: () => props.modelValue,
+  set: val => emit('update:modelValue', val)
+})
 
-// 外部通过 v-model:collapsed 同步时更新内部状态
+// 内部折叠状态持久化
+const tableSettingsStore = useTableSettingsStore()
+
+const resolveInitialCollapsed = (): boolean => {
+  if (props.settingsKey) {
+    const persisted = tableSettingsStore.getTableSettings(props.settingsKey)
+    return persisted?.filterCollapsed ?? false
+  }
+  return props.collapsed
+}
+
+const collapsedState = ref(resolveInitialCollapsed())
+
 watch(
   () => props.collapsed,
   val => {
@@ -57,10 +76,10 @@ watch(
   }
 )
 
-// 内部表单模型，保证双向同步
-const form = computed({
-  get: () => props.modelValue,
-  set: val => emit('update:modelValue', val)
+watch(collapsedState, val => {
+  if (props.settingsKey) {
+    tableSettingsStore.setTableSettings(props.settingsKey, { filterCollapsed: val })
+  }
 })
 
 /** 当前有效筛选条件摘要（用于折叠态展示） */
@@ -99,6 +118,12 @@ const onEnter = (el: Element, done: () => void) => {
   const htmlEl = el as HTMLElement
   const realHeight = htmlEl.scrollHeight
 
+  // 元素高度为 0 时跳过动画
+  if (realHeight === 0) {
+    done()
+    return
+  }
+
   // 强制回流后设置目标高度
   void htmlEl.offsetHeight
 
@@ -106,7 +131,13 @@ const onEnter = (el: Element, done: () => void) => {
   htmlEl.style.height = `${realHeight}px`
   htmlEl.style.opacity = '1'
 
-  htmlEl.addEventListener('transitionend', done, { once: true })
+  const onEnd = (e: TransitionEvent) => {
+    if (e.target !== el) return
+    htmlEl.removeEventListener('transitionend', onEnd)
+    done()
+  }
+
+  htmlEl.addEventListener('transitionend', onEnd)
 }
 
 const onAfterEnter = (el: Element) => {
@@ -130,7 +161,13 @@ const onLeave = (el: Element, done: () => void) => {
   htmlEl.style.height = '0'
   htmlEl.style.opacity = '0'
 
-  htmlEl.addEventListener('transitionend', done, { once: true })
+  const onEnd = (e: TransitionEvent) => {
+    if (e.target !== el) return
+    htmlEl.removeEventListener('transitionend', onEnd)
+    done()
+  }
+
+  htmlEl.addEventListener('transitionend', onEnd)
 }
 
 const onAfterLeave = (el: Element) => {
@@ -140,14 +177,13 @@ const onAfterLeave = (el: Element) => {
   htmlEl.style.opacity = ''
 }
 
-// 更新单个字段
 const updateField = (prop: string, value: unknown) => {
   emit('update:modelValue', { ...props.modelValue, [prop]: value })
 }
 // 查询
 const submitSearch = () => emit('search')
 
-// 重置：清空所有字段后再触发查询
+// 重置
 const resetFilters = () => {
   const cleared = { ...props.modelValue } as Record<string, unknown>
   props.fields.forEach(field => {

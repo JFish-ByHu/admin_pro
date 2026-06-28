@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from 'vue'
-import { CirclePlus, Delete, Refresh } from '@element-plus/icons-vue'
+import { CirclePlus, Delete, FolderAdd, Refresh } from '@element-plus/icons-vue'
 import { ElTag } from 'element-plus'
 import CommonTableFilter from '@/components/common/CommonTableFilter.vue'
 import CommonTable, { type CommonTableColumn } from '@/components/common/CommonTable.vue'
@@ -43,6 +43,9 @@ const dialogSubmitting = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const editingPermissionId = ref('')
 
+const groupDialogVisible = ref(false)
+const groupDialogSubmitting = ref(false)
+
 const hasPermission = (permissionCode: string) => {
   return userStore.permissions.includes(permissionCode)
 }
@@ -80,6 +83,26 @@ const {
   refreshSubjects
 } = usePermissionGrant({ permissionTreeData })
 
+/** 现有分组 code 列表（从权限树中采集） */
+const existingGroupCodes = computed(() => {
+  const codes = new Set<string>()
+
+  const travel = (nodes: PermissionResourceNode[]) => {
+    nodes.forEach(node => {
+      if (node.groupCode && !node.id.startsWith('__group__')) {
+        codes.add(node.groupCode)
+      }
+
+      if (node.children?.length) {
+        travel(node.children)
+      }
+    })
+  }
+
+  travel(permissionTreeData.value)
+  return Array.from(codes)
+})
+
 const toPermissionRow = (rowData: Record<string, unknown>) =>
   rowData as unknown as PermissionResourceTableItem
 
@@ -88,7 +111,7 @@ const dialogTitle = computed(() => {
 })
 
 const createInitialFormModel = (): PermissionResourceFormModel => ({
-  parentId: '',
+  groupCode: '',
   name: '',
   permissionCode: '',
   type: 'api',
@@ -99,75 +122,6 @@ const createInitialFormModel = (): PermissionResourceFormModel => ({
 })
 
 const formModel = ref<PermissionResourceFormModel>(createInitialFormModel())
-
-const permissionNodeChildrenMap = computed(() => {
-  const childrenMap = new Map<string, string[]>()
-
-  const travel = (nodes: PermissionResourceNode[]) => {
-    nodes.forEach(node => {
-      if (node.parentId) {
-        const siblings = childrenMap.get(node.parentId) || []
-        siblings.push(node.id)
-        childrenMap.set(node.parentId, siblings)
-      }
-
-      if (node.children?.length) {
-        travel(node.children)
-      }
-    })
-  }
-
-  travel(permissionTreeData.value)
-  return childrenMap
-})
-
-const editingNodeDescendants = computed(() => {
-  if (!editingPermissionId.value) {
-    return new Set<string>()
-  }
-
-  const descendants = new Set<string>()
-  const stack = [editingPermissionId.value]
-
-  while (stack.length > 0) {
-    const currentId = stack.pop() as string
-    const children = permissionNodeChildrenMap.value.get(currentId) || []
-
-    children.forEach(childId => {
-      if (!descendants.has(childId)) {
-        descendants.add(childId)
-        stack.push(childId)
-      }
-    })
-  }
-
-  return descendants
-})
-
-const parentOptions = computed(() => {
-  const options: Array<{ label: string; value: string }> = []
-
-  const travel = (nodes: PermissionResourceNode[], level: number) => {
-    nodes
-      .slice()
-      .sort((a, b) => a.sort - b.sort)
-      .forEach(node => {
-        if (node.id !== editingPermissionId.value && !editingNodeDescendants.value.has(node.id)) {
-          options.push({
-            label: `${'  '.repeat(level)}${node.name}`,
-            value: node.id
-          })
-        }
-
-        if (node.children?.length) {
-          travel(node.children, level + 1)
-        }
-      })
-  }
-
-  travel(permissionTreeData.value, 0)
-  return options
-})
 
 const openAddPermissionDialog = () => {
   if (!canCreatePermission.value) {
@@ -188,7 +142,7 @@ const openEditPermissionDialog = (row: PermissionResourceTableItem) => {
   dialogMode.value = 'edit'
   editingPermissionId.value = row.id
   formModel.value = {
-    parentId: row.parentId || '',
+    groupCode: row.groupCode || '',
     name: row.name,
     permissionCode: row.permissionCode,
     type: row.type,
@@ -220,7 +174,7 @@ const submitPermissionDialog = async (payload: PermissionResourceFormModel) => {
   try {
     if (dialogMode.value === 'add') {
       await addPermissionResource({
-        parentId: payload.parentId || undefined,
+        groupCode: payload.groupCode || undefined,
         name: payload.name,
         permissionCode: payload.permissionCode,
         type: payload.type,
@@ -232,7 +186,7 @@ const submitPermissionDialog = async (payload: PermissionResourceFormModel) => {
       Message.success('权限创建成功')
     } else {
       await updatePermissionResource(editingPermissionId.value, {
-        parentId: payload.parentId || null,
+        groupCode: payload.groupCode || null,
         name: payload.name,
         permissionCode: payload.permissionCode,
         type: payload.type,
@@ -249,6 +203,44 @@ const submitPermissionDialog = async (payload: PermissionResourceFormModel) => {
     await Promise.all([refreshPermissionResources(), refreshSubjects()])
   } finally {
     dialogSubmitting.value = false
+  }
+}
+
+const openGroupDialog = () => {
+  if (!canCreatePermission.value) {
+    return
+  }
+
+  groupDialogVisible.value = true
+}
+
+const submitGroupDialog = async (payload: { groupCode: string; sort: number; status: string }) => {
+  if (!canCreatePermission.value) {
+    return
+  }
+
+  groupDialogSubmitting.value = true
+
+  try {
+    const groupCode = payload.groupCode
+    const groupSeedName = `${groupCode}分组`
+    const groupSeedPermissionCode = `system:${groupCode}:group`
+
+    await addPermissionResource({
+      groupCode,
+      name: groupSeedName,
+      permissionCode: groupSeedPermissionCode,
+      type: 'button',
+      sort: payload.sort,
+      isActive: payload.status === 'enabled'
+    })
+
+    Message.success('分组创建成功')
+    groupDialogVisible.value = false
+    selectedRowKeys.value = []
+    await Promise.all([refreshPermissionResources(), refreshSubjects()])
+  } finally {
+    groupDialogSubmitting.value = false
   }
 }
 
@@ -315,8 +307,14 @@ const permissionTypeTagConfigMap = {
   button: { label: '按钮', type: 'info' }
 } as const
 
-const getPermissionNodeTagInfo = (data: unknown) =>
-  permissionTypeTagConfigMap[(data as PermissionResourceNode).type]
+const getPermissionNodeTagInfo = (data: unknown) => {
+  const node = data as PermissionResourceNode
+  // 虚拟分组节点显示"分组"标签
+  if (node.id.startsWith('__group__')) {
+    return { label: '分组', type: 'success' as const }
+  }
+  return permissionTypeTagConfigMap[node.type]
+}
 
 const resourceColumns: CommonTableColumn[] = [
   {
@@ -407,6 +405,16 @@ const toolbarActions = computed<CommonTableToolbarAction[]>(() => {
       onClick: openAddPermissionDialog
     },
     {
+      key: 'add-group',
+      label: '新增分组',
+      icon: FolderAdd,
+      size: 'small',
+      color: 'var(--c-info)',
+      permission: PERMISSION_PERMISSION_CODES.CREATE,
+      disabled: !canCreatePermission.value,
+      onClick: openGroupDialog
+    },
+    {
       key: 'batch-delete-permission',
       label: '批量删除',
       icon: Delete,
@@ -457,6 +465,7 @@ useContentRefresh(() => refreshTabData())
             :fields="filterFields"
             :loading="loading"
             collapsible
+            settings-key="permission-filter"
             @search="searchPermissionResources"
             @reset="resetPermissionFilters"
           />
@@ -497,8 +506,16 @@ useContentRefresh(() => refreshTabData())
                 : PERMISSION_PERMISSION_CODES.UPDATE
             "
             :initial-value="formModel"
-            :parent-options="parentOptions"
+            :existing-group-codes="existingGroupCodes"
             @submit="submitPermissionDialog"
+          />
+
+          <PermissionGroupFormDialog
+            v-model:visible="groupDialogVisible"
+            :submitting="groupDialogSubmitting"
+            :submit-permission="PERMISSION_PERMISSION_CODES.CREATE"
+            :existing-group-codes="existingGroupCodes"
+            @submit="submitGroupDialog"
           />
         </div>
       </el-tab-pane>

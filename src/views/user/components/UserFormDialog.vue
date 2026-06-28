@@ -49,12 +49,9 @@ const formRules: FormRules<UserFormModel> = {
     { type: 'email', message: '邮箱格式不正确', trigger: ['blur', 'change'] }
   ],
   password: [
+    { required: props.mode === 'add', message: '请输入密码', trigger: 'blur' },
     {
       validator: (_rule, value, callback) => {
-        if (props.mode === 'add' && !value) {
-          callback(new Error('请输入密码'))
-          return
-        }
         if (value && value.length < 6) {
           callback(new Error('密码不能少于 6 位'))
           return

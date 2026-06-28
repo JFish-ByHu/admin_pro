@@ -465,6 +465,7 @@ useContentRefresh(() => refreshTabData())
             :fields="filterFields"
             :loading="loading"
             collapsible
+            settings-key="menu-filter"
             @search="searchMenuResources"
             @reset="resetMenuFilters"
           />

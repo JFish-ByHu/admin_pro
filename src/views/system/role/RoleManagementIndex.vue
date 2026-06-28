@@ -446,6 +446,7 @@ useContentRefresh(() => refreshData())
       :fields="filterFields"
       :loading="loading"
       collapsible
+      settings-key="role-filter"
       @search="searchRoles"
       @reset="resetRoleFilters"
     />

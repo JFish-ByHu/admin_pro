@@ -468,6 +468,7 @@ useContentRefresh(() => getUsers())
       :fields="filterFields"
       :loading="loading"
       collapsible
+      settings-key="user-filter"
       @search="searchUsers"
       @reset="resetFilters"
     />

@@ -20,6 +20,7 @@ declare module 'vue' {
     CommonTableSetting: typeof import('./src/components/common/CommonTableSetting.vue')['default']
     CommonTableToolbar: typeof import('./src/components/common/CommonTableToolbar.vue')['default']
     CommonVirtualTable: typeof import('./src/components/common/CommonVirtualTable.vue')['default']
+    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
     ElBreadcrumbItem: typeof import('element-plus/es')['ElBreadcrumbItem']

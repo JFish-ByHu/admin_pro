@@ -4,7 +4,7 @@ export type PermissionResourceStatus = 'enabled' | 'disabled'
 
 export interface PermissionResourceNode {
   id: string
-  parentId: string | null
+  groupCode: string | null
   name: string
   type: PermissionResourceType
   permissionCode: string
@@ -19,7 +19,7 @@ export interface PermissionResourceNode {
 
 export interface PermissionResourceTableItem {
   id: string
-  parentId: string | null
+  groupCode: string | null
   level: number
   name: string
   type: PermissionResourceType
@@ -65,7 +65,7 @@ export interface RolePermissionGrantUpdateParams {
 }
 
 export interface PermissionResourceCreateParams {
-  parentId?: string
+  groupCode?: string
   name: string
   permissionCode: string
   type: PermissionResourceType
@@ -76,7 +76,7 @@ export interface PermissionResourceCreateParams {
 }
 
 export interface PermissionResourceUpdateParams {
-  parentId?: string | null
+  groupCode?: string | null
   name?: string
   permissionCode?: string
   type?: PermissionResourceType
@@ -87,7 +87,7 @@ export interface PermissionResourceUpdateParams {
 }
 
 export interface PermissionResourceFormModel {
-  parentId: string
+  groupCode: string
   name: string
   permissionCode: string
   type: PermissionResourceType

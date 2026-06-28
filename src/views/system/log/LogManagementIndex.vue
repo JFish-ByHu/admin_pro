@@ -234,6 +234,7 @@ useContentRefresh(() => refreshTabData())
             :fields="filterFields"
             :loading="loading"
             collapsible
+            settings-key="log-operation-filter"
             @search="searchLogs"
             @reset="resetLogFilters"
           />
@@ -248,6 +249,8 @@ useContentRefresh(() => refreshTabData())
             settings-key="log-operation-table"
             show-settings
             configurable-columns
+            configurable-selection
+            selectable
             @page-change="refreshLogs"
           >
             <template #header>
@@ -264,6 +267,7 @@ useContentRefresh(() => refreshTabData())
             :fields="filterFields"
             :loading="loading"
             collapsible
+            settings-key="log-error-filter"
             @search="searchLogs"
             @reset="resetLogFilters"
           />
@@ -278,6 +282,8 @@ useContentRefresh(() => refreshTabData())
             settings-key="log-error-table"
             show-settings
             configurable-columns
+            configurable-selection
+            selectable
             @page-change="refreshLogs"
           >
             <template #header>
