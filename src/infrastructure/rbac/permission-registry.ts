@@ -6,6 +6,8 @@ export type PermissionDefinition = {
   type: PermissionType
   sort: number
   groupCode?: string
+  apiPath?: string
+  httpMethod?: string
 }
 
 export const USER_PERMISSION_CODES = {
@@ -48,155 +50,221 @@ export const LOG_PERMISSION_CODES = {
 } as const
 
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
-  { code: USER_PERMISSION_CODES.LIST, name: '用户列表', type: 'api', sort: 1, groupCode: 'user' },
+  {
+    code: USER_PERMISSION_CODES.LIST,
+    name: '用户列表',
+    type: 'api',
+    sort: 1,
+    groupCode: 'user',
+    apiPath: '/users/list',
+    httpMethod: 'GET'
+  },
   {
     code: USER_PERMISSION_CODES.DETAIL,
     name: '用户详情',
     type: 'api',
     sort: 2,
-    groupCode: 'user'
+    groupCode: 'user',
+    apiPath: '/users/detail/:id',
+    httpMethod: 'GET'
   },
   {
     code: USER_PERMISSION_CODES.CREATE,
     name: '创建用户',
     type: 'button',
     sort: 3,
-    groupCode: 'user'
+    groupCode: 'user',
+    apiPath: '/users/add',
+    httpMethod: 'POST'
   },
   {
     code: USER_PERMISSION_CODES.UPDATE,
     name: '更新用户',
     type: 'button',
     sort: 4,
-    groupCode: 'user'
+    groupCode: 'user',
+    apiPath: '/users/update/:id',
+    httpMethod: 'PATCH'
   },
   {
     code: USER_PERMISSION_CODES.DELETE,
     name: '删除用户',
     type: 'button',
     sort: 5,
-    groupCode: 'user'
+    groupCode: 'user',
+    apiPath: '/users/delete/:id',
+    httpMethod: 'DELETE'
   },
-  { code: MENU_PERMISSION_CODES.LIST, name: '菜单列表', type: 'api', sort: 6, groupCode: 'menu' },
+  {
+    code: MENU_PERMISSION_CODES.LIST,
+    name: '菜单列表',
+    type: 'api',
+    sort: 6,
+    groupCode: 'menu',
+    apiPath: '/menus/list',
+    httpMethod: 'GET'
+  },
   {
     code: MENU_PERMISSION_CODES.DETAIL,
     name: '菜单详情',
     type: 'api',
     sort: 7,
-    groupCode: 'menu'
+    groupCode: 'menu',
+    apiPath: '/menus/detail/:id',
+    httpMethod: 'GET'
   },
   {
     code: MENU_PERMISSION_CODES.CREATE,
     name: '创建菜单',
     type: 'button',
     sort: 8,
-    groupCode: 'menu'
+    groupCode: 'menu',
+    apiPath: '/menus/add',
+    httpMethod: 'POST'
   },
   {
     code: MENU_PERMISSION_CODES.UPDATE,
     name: '更新菜单',
     type: 'button',
     sort: 9,
-    groupCode: 'menu'
+    groupCode: 'menu',
+    apiPath: '/menus/update/:id',
+    httpMethod: 'PATCH'
   },
   {
     code: MENU_PERMISSION_CODES.DELETE,
     name: '删除菜单',
     type: 'button',
     sort: 10,
-    groupCode: 'menu'
+    groupCode: 'menu',
+    apiPath: '/menus/delete/:id',
+    httpMethod: 'DELETE'
   },
   {
     code: MENU_PERMISSION_CODES.GRANT,
     name: '菜单授权',
     type: 'button',
     sort: 11,
-    groupCode: 'menu'
+    groupCode: 'menu',
+    apiPath: '/menus/grant/update',
+    httpMethod: 'POST'
   },
   {
     code: PERMISSION_PERMISSION_CODES.LIST,
     name: '权限列表',
     type: 'api',
     sort: 12,
-    groupCode: 'permission'
+    groupCode: 'permission',
+    apiPath: '/permissions/list',
+    httpMethod: 'GET'
   },
   {
     code: PERMISSION_PERMISSION_CODES.DETAIL,
     name: '权限详情',
     type: 'api',
     sort: 13,
-    groupCode: 'permission'
+    groupCode: 'permission',
+    apiPath: '/permissions/detail/:id',
+    httpMethod: 'GET'
   },
   {
     code: PERMISSION_PERMISSION_CODES.CREATE,
     name: '创建权限',
     type: 'button',
     sort: 14,
-    groupCode: 'permission'
+    groupCode: 'permission',
+    apiPath: '/permissions/add',
+    httpMethod: 'POST'
   },
   {
     code: PERMISSION_PERMISSION_CODES.UPDATE,
     name: '更新权限',
     type: 'button',
     sort: 15,
-    groupCode: 'permission'
+    groupCode: 'permission',
+    apiPath: '/permissions/update/:id',
+    httpMethod: 'PATCH'
   },
   {
     code: PERMISSION_PERMISSION_CODES.DELETE,
     name: '删除权限',
     type: 'button',
     sort: 16,
-    groupCode: 'permission'
+    groupCode: 'permission',
+    apiPath: '/permissions/delete/:id',
+    httpMethod: 'DELETE'
   },
   {
     code: PERMISSION_PERMISSION_CODES.GRANT,
     name: '权限授权',
     type: 'button',
     sort: 17,
-    groupCode: 'permission'
+    groupCode: 'permission',
+    apiPath: '/permissions/grant/update',
+    httpMethod: 'POST'
   },
   {
     code: ROLE_PERMISSION_CODES.LIST,
     name: '角色列表',
     type: 'api',
     sort: 18,
-    groupCode: 'role'
+    groupCode: 'role',
+    apiPath: '/roles/list',
+    httpMethod: 'GET'
   },
   {
     code: ROLE_PERMISSION_CODES.DETAIL,
     name: '角色详情',
     type: 'api',
     sort: 19,
-    groupCode: 'role'
+    groupCode: 'role',
+    apiPath: '/roles/detail/:id',
+    httpMethod: 'GET'
   },
   {
     code: ROLE_PERMISSION_CODES.CREATE,
     name: '创建角色',
     type: 'button',
     sort: 20,
-    groupCode: 'role'
+    groupCode: 'role',
+    apiPath: '/roles/add',
+    httpMethod: 'POST'
   },
   {
     code: ROLE_PERMISSION_CODES.UPDATE,
     name: '更新角色',
     type: 'button',
     sort: 21,
-    groupCode: 'role'
+    groupCode: 'role',
+    apiPath: '/roles/update/:id',
+    httpMethod: 'PATCH'
   },
   {
     code: ROLE_PERMISSION_CODES.DELETE,
     name: '删除角色',
     type: 'button',
     sort: 22,
-    groupCode: 'role'
+    groupCode: 'role',
+    apiPath: '/roles/delete/:id',
+    httpMethod: 'DELETE'
   },
-  { code: LOG_PERMISSION_CODES.LIST, name: '日志列表', type: 'api', sort: 30, groupCode: 'log' },
+  {
+    code: LOG_PERMISSION_CODES.LIST,
+    name: '日志列表',
+    type: 'api',
+    sort: 30,
+    groupCode: 'log',
+    apiPath: '/logs/list',
+    httpMethod: 'GET'
+  },
   {
     code: LOG_PERMISSION_CODES.DETAIL,
     name: '日志详情',
     type: 'api',
     sort: 31,
-    groupCode: 'log'
+    groupCode: 'log',
+    apiPath: '/logs/detail/:id',
+    httpMethod: 'GET'
   }
 ]
 

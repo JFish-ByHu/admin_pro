@@ -64,20 +64,17 @@ export class PermissionResourceService {
 
     allGroups.forEach(g => {
       groupNameMap.set(g.code, g.name)
-      groupMap.set(g.code, {
+      const groupNode: PermissionResourceTreeNodeDto = {
         id: `__group__${g.code}`,
         groupCode: g.code,
         name: g.name,
-        type: 'api',
-        permissionCode: '',
-        apiPath: '',
-        httpMethod: '',
         sort: g.sort,
         status: g.isActive ? 'enabled' : 'disabled',
         createTime: g.createTime,
         updateTime: g.updateTime,
         children: []
-      })
+      } as unknown as PermissionResourceTreeNodeDto
+      groupMap.set(g.code, groupNode)
     })
 
     // 2) 把权限叶子节点挂到对应分组下；无分组权限放 ungrouped
@@ -90,20 +87,17 @@ export class PermissionResourceService {
       if (item.groupCode) {
         if (!groupMap.has(item.groupCode)) {
           const groupName = groupNameMap.get(item.groupCode) || item.groupCode
-          groupMap.set(item.groupCode, {
+          const fallbackNode: PermissionResourceTreeNodeDto = {
             id: `__group__${item.groupCode}`,
             groupCode: item.groupCode,
             name: groupName,
-            type: 'api',
-            permissionCode: '',
-            apiPath: '',
-            httpMethod: '',
             sort: 0,
             status: 'enabled',
             createTime: '',
             updateTime: '',
             children: []
-          })
+          } as unknown as PermissionResourceTreeNodeDto
+          groupMap.set(item.groupCode, fallbackNode)
         }
 
         groupMap.get(item.groupCode)!.children.push(node)

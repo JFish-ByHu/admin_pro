@@ -193,7 +193,9 @@ export class RbacBootstrapService {
         code: true,
         name: true,
         type: true,
-        sort: true
+        sort: true,
+        apiPath: true,
+        httpMethod: true
       }
     })
     const existsMap = new Map(exists.map(item => [item.code, item]))
@@ -208,8 +210,8 @@ export class RbacBootstrapService {
           code: seed.code,
           name: seed.name,
           type: seed.type,
-          apiPath: null,
-          httpMethod: null,
+          apiPath: seed.apiPath ?? null,
+          httpMethod: seed.httpMethod ?? null,
           sort: seed.sort,
           isActive: true
         })
