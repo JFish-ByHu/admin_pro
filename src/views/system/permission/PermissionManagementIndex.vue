@@ -435,7 +435,7 @@ const getPermissionNodeTagInfo = (data: unknown) => {
   if (node.id.startsWith('__group__')) {
     return { label: '分组', type: 'success' as const }
   }
-  return permissionTypeTagConfigMap[node.type]
+  return permissionTypeTagConfigMap[node.type || 'api']
 }
 
 const resourceColumns: CommonTableColumn[] = [
@@ -678,7 +678,7 @@ useContentRefresh(() => refreshTabData())
               :name="(data as PermissionResourceNode).name"
               :tag-label="getPermissionNodeTagInfo(data).label"
               :tag-type="getPermissionNodeTagInfo(data).type"
-              :descriptor="(data as PermissionResourceNode).permissionCode"
+              :descriptor="(data as PermissionResourceNode).permissionCode || ''"
             />
           </template>
         </SystemGrantPane>

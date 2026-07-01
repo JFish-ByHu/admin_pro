@@ -6,10 +6,10 @@ export interface PermissionResourceNode {
   id: string
   groupCode: string | null
   name: string
-  type: PermissionResourceType
-  permissionCode: string
-  apiPath: string
-  httpMethod: string
+  type?: PermissionResourceType
+  permissionCode?: string
+  apiPath?: string
+  httpMethod?: string
   status: PermissionResourceStatus
   sort: number
   createTime: string
